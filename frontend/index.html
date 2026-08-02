@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- Matches --page in global.css. The browser chrome is part of the app's
+         first impression on mobile, and a mismatched strip above the status bar
+         is the cheapest way to look unfinished. -->
+    <meta name="theme-color" content="#09090B" />
+    <meta name="color-scheme" content="dark" />
+    <title>RepX — Ranked Fitness</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <!--
+      Painted before React mounts. The app is dark-only, so this is not a
+      flash-of-wrong-theme guard — it is a flash-of-*white* guard: without it the
+      browser shows its own white canvas for the length of one bundle parse, and
+      the first frame of a premium product is a white rectangle.
+    -->
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

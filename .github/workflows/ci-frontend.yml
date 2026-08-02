@@ -1,0 +1,40 @@
+name: CI — Frontend
+
+on:
+  pull_request:
+    paths:
+      - "frontend/**"
+      - "shared/**"
+      - "package.json"
+      - "pnpm-workspace.yaml"
+      - "turbo.json"
+  push:
+    branches: [main]
+    paths:
+      - "frontend/**"
+      - "shared/**"
+
+jobs:
+  lint-typecheck-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      # TODO: uncomment once frontend/package.json has real scripts and a lockfile exists
+      # - run: pnpm install --frozen-lockfile
+      # - run: pnpm --filter frontend lint
+      # - run: pnpm --filter frontend typecheck
+      # - run: pnpm --filter frontend test
+      # - run: pnpm --filter frontend build
+
+      - name: Placeholder — no application code yet
+        run: echo "Frontend has no source code yet. See docs/IMPLEMENT.md for build phase status."

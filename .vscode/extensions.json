@@ -1,0 +1,11 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "prisma.prisma",
+    "bradlc.vscode-tailwindcss",
+    "msjsdiag.vscode-react-native",
+    "eamodio.gitlens",
+    "redhat.vscode-yaml"
+  ]
+}

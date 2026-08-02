@@ -1,0 +1,70 @@
+# --- Dependencies ---
+node_modules/
+.pnpm-store/
+
+# --- Build output ---
+dist/
+build/
+out/
+.turbo/
+*.tsbuildinfo
+
+# --- Environment / secrets ---
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+!*.example
+
+# --- Logs ---
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+*.log
+
+# --- Testing / coverage ---
+coverage/
+.nyc_output/
+
+# --- Expo / React Native ---
+.expo/
+.expo-shared/
+*.jsbundle
+*.hbc
+ios/Pods/
+ios/build/
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+*.keystore
+!debug.keystore
+
+# --- Xcode ---
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+DerivedData/
+
+# --- Android Studio ---
+.gradle/
+local.properties
+*.iml
+.idea/
+
+# --- Editor / OS ---
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+
+# --- Prisma ---
+*.db
+*.db-journal
+
+# --- Misc ---
+.cache/
+.eslintcache

@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: RepX Documentation
+    url: https://github.com/repx/repx/tree/main/docs
+    about: Check the docs before filing an issue — your question may already be answered.

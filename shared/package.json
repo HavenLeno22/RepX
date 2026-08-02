@@ -1,0 +1,29 @@
+{
+  "name": "@repx/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared TypeScript types, zod schemas, ELO math, and exercise plugins used by both @repx/frontend and @repx/backend.",
+  "//build": "Dual emit: CommonJS for the NestJS backend, ESM so Vite/Rollup can statically analyse named exports and tree-shake.",
+  "main": "./dist/index.js",
+  "module": "./dist-esm/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist-esm/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.esm.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test dist/exercise-engine/exercise-engine.test.js dist/progression/progression.test.js"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}

@@ -1,0 +1,279 @@
+// RepX data model — see docs/DATABASE_SCHEMA.md
+//
+// Deliberately portable: no native enums, no Postgres-only column types. Local
+// development runs on SQLite (zero install); production targets PostgreSQL via
+// a provider swap plus a fresh migration. Status/mode/result columns are plain
+// strings whose allowed values are enforced by the zod schemas and union types
+// in @repx/shared, so the constraint lives in one place rather than two.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String  @id @default(cuid())
+  email        String  @unique
+  username     String  @unique
+  passwordHash String?
+
+  // Stored as a data URL. Fine at this scale and keeps the project free of
+  // object-storage infrastructure; move to S3/CDN before real user volume.
+  avatarUrl String?
+  bio       String?
+  country   String?
+
+  rating     Int @default(1000)
+  peakRating Int @default(1000)
+
+  matchesPlayed Int @default(0)
+  wins          Int @default(0)
+  losses        Int @default(0)
+  draws         Int @default(0)
+  currentStreak Int @default(0)
+  longestStreak Int @default(0)
+
+  // Progression. Rating can fall; none of these can — that asymmetry is what
+  // gives a player on a losing streak something still moving forward.
+  // Level is always derived from xp (see levelForXp in @repx/shared) rather
+  // than stored, so the two can never drift apart.
+  xp Int @default(0)
+
+  // Consecutive calendar days with at least one match, and the UTC date of the
+  // last one as YYYY-MM-DD. Stored as a string rather than a DateTime because
+  // the only question ever asked of it is "same day, yesterday, or older?" —
+  // comparing date strings answers that without timezone arithmetic.
+  dayStreak    Int     @default(0)
+  lastPlayedOn String?
+
+  // Denormalised achievement counters. These are derivable by aggregating match
+  // history, but the achievement catalogue is evaluated on every settle and a
+  // full re-aggregation per match would grow linearly with a player's career.
+  totalReps       Int @default(0)
+  flawlessMatches Int @default(0)
+  perfectGrades   Int @default(0)
+  comebacks       Int @default(0)
+
+  // active | suspended | banned
+  status String @default("active")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  identities    AuthIdentity[]
+  participants  MatchParticipant[]
+  eloHistory    EloHistory[]
+  cheatFlags    CheatFlag[]
+  refreshTokens RefreshToken[]
+  achievements  AchievementUnlock[]
+  missions      MissionProgress[]
+  notifications Notification[]
+  friendsSent     Friendship[] @relation("FriendRequester")
+  friendsReceived Friendship[] @relation("FriendAddressee")
+
+  @@index([rating])
+}
+
+// Symmetric friendship stored as one directed row.
+//
+// The alternative — two mirrored rows — makes "are these two friends?" a write
+// that can half-fail, and every list query a union. One row plus an
+// or-on-either-side query keeps the invariant impossible to break, at the cost
+// of every read having to check both columns. That trade is worth it: a
+// half-created friendship is a support ticket, a slightly longer query is not.
+model Friendship {
+  id          String @id @default(cuid())
+  requesterId String
+  addresseeId String
+
+  // pending | accepted
+  status String @default("pending")
+
+  createdAt  DateTime  @default(now())
+  acceptedAt DateTime?
+
+  requester User @relation("FriendRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee User @relation("FriendAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+  @@index([addresseeId, status])
+  @@index([requesterId, status])
+}
+
+// Append-only: an unlock is a fact about a moment, so it is never updated and
+// never deleted. Achievements whose metric can fall (rating, current streak)
+// therefore stay earned. See ACHIEVEMENTS in @repx/shared.
+model AchievementUnlock {
+  id            String @id @default(cuid())
+  userId        String
+  achievementId String
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+}
+
+// One row per player, per mission, per period. `periodKey` is the day (2026-08-02)
+// or ISO week (2026-W31) the mission belongs to, which is what makes the whole
+// system schedulerless: nothing has to run at midnight, because tomorrow's row
+// simply has tomorrow's key.
+model MissionProgress {
+  id        String @id @default(cuid())
+  userId    String
+  missionId String
+  // daily | weekly
+  period    String
+  periodKey String
+
+  progress Int       @default(0)
+  claimedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, missionId, periodKey])
+  @@index([userId, periodKey])
+}
+
+model Notification {
+  id     String @id @default(cuid())
+  userId String
+
+  // promotion | demotion | achievement | mission | season | challenge | tournament | system
+  category String
+  title    String
+  body     String
+  href     String?
+
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model AuthIdentity {
+  id             String @id @default(cuid())
+  userId         String
+  // google | apple | email
+  provider       String
+  providerUserId String
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  // Stored hashed so a database read cannot mint sessions. See docs/AUTHENTICATION.md
+  tokenHash String   @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Match {
+  id           String @id @default(cuid())
+  exerciseSlug String
+  // ranked | quick | friendly
+  mode         String
+  // pending | countdown | active | completed | forfeited | voided
+  status       String @default("pending")
+
+  durationSeconds Int @default(60)
+
+  startedAt DateTime?
+  endedAt   DateTime?
+  createdAt DateTime  @default(now())
+
+  participants MatchParticipant[]
+  eloHistory   EloHistory[]
+  cheatFlags   CheatFlag[]
+
+  @@index([exerciseSlug])
+  @@index([status])
+}
+
+model MatchParticipant {
+  id      String @id @default(cuid())
+  matchId String
+  userId  String
+
+  repCount       Int   @default(0)
+  rejectedReps   Int   @default(0)
+  averageQuality Float @default(0)
+
+  // win | loss | draw | null while in progress
+  result      String?
+  ratingBefore Int?
+  ratingAfter  Int?
+  ratingDelta  Int?
+
+  // S | A | B | C | D — grades the performance, not the outcome, so a player
+  // who is outmatched on rating still has something to improve that is entirely
+  // within their control. Persisted rather than recomputed so a change to the
+  // grading curve cannot silently rewrite a player's history.
+  grade     String?
+  xpEarned  Int     @default(0)
+
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, userId])
+  @@index([userId])
+}
+
+model EloHistory {
+  id      String @id @default(cuid())
+  userId  String
+  matchId String
+
+  ratingBefore Int
+  ratingAfter  Int
+  delta        Int
+  kFactor      Int
+
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model CheatFlag {
+  id      String  @id @default(cuid())
+  userId  String
+  matchId String?
+
+  reason   String
+  // low | medium | high
+  severity String
+  details  String?
+
+  createdAt DateTime @default(now())
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  match Match? @relation(fields: [matchId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+}

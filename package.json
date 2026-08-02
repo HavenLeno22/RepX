@@ -1,0 +1,42 @@
+{
+  "name": "repx",
+  "version": "0.1.0",
+  "private": true,
+  "description": "RepX — the Chess.com of fitness. Competitive, AI-verified bodyweight exercise matches.",
+  "license": "UNLICENSED",
+  "workspaces": [
+    "shared",
+    "backend",
+    "frontend"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "setup": "npm install && npm run build -w @repx/shared && npm run db:setup -w @repx/backend",
+    "dev": "concurrently -n backend,frontend -c cyan,magenta \"npm run dev -w @repx/backend\" \"npm run dev -w @repx/frontend\"",
+    "dev:backend": "npm run dev -w @repx/backend",
+    "dev:frontend": "npm run dev -w @repx/frontend",
+    "build": "npm run build -w @repx/shared && npm run build -w @repx/backend && npm run build -w @repx/frontend",
+    "db:setup": "npm run db:setup -w @repx/backend",
+    "db:studio": "npm run db:studio -w @repx/backend",
+    "typecheck": "npm run typecheck -w @repx/shared && npm run typecheck -w @repx/backend && npm run typecheck -w @repx/frontend",
+    "test": "npm run test -w @repx/shared",
+    "test:e2e": "npm run test:e2e -w @repx/backend"
+  },
+  "//test": {
+    "note": "`npm test` is offline: exercise-engine and ELO regression tests in shared/. `npm run test:e2e` drives two real Socket.IO clients through a full match and needs the API running (npm run dev:backend). Frontend component tests are still outstanding — see docs/TESTING.md."
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "typescript": "^5.6.3"
+  },
+  "//allowScripts": "npm 11 blocks install scripts by default. These three genuinely need them: Prisma downloads/generates its query engine, esbuild installs its platform binary for Vite.",
+  "allowScripts": {
+    "@prisma/client": true,
+    "@prisma/engines": true,
+    "prisma": true,
+    "esbuild": true,
+    "@nestjs/core": false
+  }
+}
