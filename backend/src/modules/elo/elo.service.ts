@@ -23,13 +23,21 @@ export class EloService {
   /**
    * Applies rating changes for both players of a completed ranked match.
    * Unranked modes skip rating entirely but still record win/loss counters.
+   *
+   * `counted` is the separate axis: a match voided by anti-cheat records what
+   * happened on each participant row but must not move the career record either.
+   * Withholding only the rating still let a fabricated frame stream buy a win in
+   * the win column, a streak, and every achievement measured against those —
+   * which is most of what a cheat is actually farming.
    */
   async applyMatchResult(params: {
     matchId: string;
     ranked: boolean;
+    counted?: boolean;
     players: { userId: string; outcome: MatchOutcome }[];
   }): Promise<AppliedRating[]> {
     const { matchId, ranked, players } = params;
+    const counted = params.counted ?? true;
     if (players.length !== 2) return [];
 
     const rows = await this.prisma.user.findMany({
@@ -59,19 +67,21 @@ export class EloService {
       const nextStreak = won ? me.currentStreak + 1 : 0;
 
       await this.prisma.$transaction(async (tx) => {
-        await tx.user.update({
-          where: { id: me.id },
-          data: {
-            rating: change.after,
-            peakRating: Math.max(me.peakRating, change.after),
-            matchesPlayed: { increment: 1 },
-            wins: won ? { increment: 1 } : undefined,
-            losses: !won && !drew ? { increment: 1 } : undefined,
-            draws: drew ? { increment: 1 } : undefined,
-            currentStreak: nextStreak,
-            longestStreak: Math.max(me.longestStreak, nextStreak),
-          },
-        });
+        if (counted) {
+          await tx.user.update({
+            where: { id: me.id },
+            data: {
+              rating: change.after,
+              peakRating: Math.max(me.peakRating, change.after),
+              matchesPlayed: { increment: 1 },
+              wins: won ? { increment: 1 } : undefined,
+              losses: !won && !drew ? { increment: 1 } : undefined,
+              draws: drew ? { increment: 1 } : undefined,
+              currentStreak: nextStreak,
+              longestStreak: Math.max(me.longestStreak, nextStreak),
+            },
+          });
+        }
 
         await tx.matchParticipant.updateMany({
           where: { matchId, userId: me.id },

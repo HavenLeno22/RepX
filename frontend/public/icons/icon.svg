@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="RepX">
+  <rect width="512" height="512" rx="112" fill="#07080C"/>
+  <rect x="16" y="16" width="480" height="480" rx="98" fill="url(#plate)"/>
+  <!-- The bolt from the app's own mark, struck in Electric Lime. -->
+  <path d="M292 96 L168 280 h72 l-20 136 124 -184 h-72 z" fill="#B6FF3B"/>
+  <defs>
+    <linearGradient id="plate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1C2029"/>
+      <stop offset="100%" stop-color="#12141B"/>
+    </linearGradient>
+  </defs>
+</svg>

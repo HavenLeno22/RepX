@@ -20,6 +20,7 @@ import {
 } from '@repx/shared';
 import { EASE } from '../lib/motion';
 import { Icon, type IconName } from './Icon';
+import { RankCrest } from './RankCrest';
 
 /* ------------------------------------------------------------------ tier -- */
 
@@ -37,13 +38,12 @@ export function Tier({ rating, showRating = true }: { rating: number; showRating
 /* --------------------------------------------------------------- emblem -- */
 
 /**
- * The rank emblem: a tinted plate carrying a rank glyph.
+ * The rank emblem.
  *
- * Drawn rather than illustrated. Seven painted emblems would be seven assets to
- * commission, seven files to load, and seven things to redraw the day an eighth
- * tier is added — while a tinted plate scales to any tier for free and stays
- * pin-sharp at every size. It reads as a rank crest because of the shape, the
- * bevel and the glow, none of which need a raster.
+ * Kept as the name the rest of the product already calls, but the drawing now
+ * lives in `RankCrest` — a struck heraldic shield whose *shape* escalates with
+ * the tier, not just its hue. Every screen that showed a tinted rounded square
+ * gets the crest by importing nothing new.
  */
 export function Emblem({
   rating,
@@ -54,31 +54,7 @@ export function Emblem({
   size?: 'sm' | 'md' | 'lg';
   glow?: boolean;
 }) {
-  const rank = rankForRating(rating);
-  const icon: IconName =
-    rank.id === 'grandmaster' || rank.id === 'master'
-      ? 'crown'
-      : rank.id === 'diamond'
-        ? 'gem'
-        : rank.id === 'platinum'
-          ? 'shield'
-          : 'medal';
-
-  const iconSize = size === 'lg' ? 34 : size === 'md' ? 22 : 15;
-
-  return (
-    <span
-      className={`emblem emblem--${size}`}
-      style={{
-        background: `linear-gradient(155deg, ${rank.color}38, ${rank.color}12)`,
-        color: rank.color,
-        boxShadow: `inset 0 0 0 1.5px ${rank.color}59${glow ? `, 0 0 20px ${rank.color}30` : ''}`,
-      }}
-      title={rank.name}
-    >
-      <Icon name={icon} size={iconSize} strokeWidth={1.6} />
-    </span>
-  );
+  return <RankCrest rating={rating} size={size} glow={glow} />;
 }
 
 /* ---------------------------------------------------------------- grades -- */

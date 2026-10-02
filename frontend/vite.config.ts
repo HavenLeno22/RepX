@@ -3,6 +3,36 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   plugins: [react()],
+  build: {
+    rollupOptions: {
+      output: {
+        /**
+         * Split the dependencies that never change away from the app code that
+         * changes on every deploy.
+         *
+         * This is a caching decision, not a size one — the bytes are the same
+         * either way. In one chunk, shipping a one-line copy fix re-downloads
+         * React, the router and the animation library along with it, because the
+         * content hash in the filename moves. Split, a returning player fetches
+         * only the app chunk and reuses ~150KB from cache.
+         *
+         * That matters more here than in most apps: RepX is opened on a phone,
+         * on gym wifi or mobile data, immediately before someone wants to play,
+         * and it already has a ~5MB pose model to fetch on first run. Every
+         * kilobyte not spent on the shell is one available to the thing the app
+         * cannot start without.
+         *
+         * `framer-motion` is kept separate from `react` deliberately: it is the
+         * largest single dependency and the most likely to be upgraded, so
+         * bundling it with React would invalidate both.
+         */
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+          motion: ['framer-motion'],
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
     proxy: {

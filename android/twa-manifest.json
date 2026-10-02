@@ -1,0 +1,53 @@
+{
+  "packageId": "app.repx.twa",
+  "host": "repx.app",
+  "name": "RepX — Ranked Fitness",
+  "launcherName": "RepX",
+  "display": "standalone",
+  "orientation": "portrait",
+  "themeColor": "#07080C",
+  "themeColorDark": "#07080C",
+  "navigationColor": "#07080C",
+  "navigationColorDark": "#07080C",
+  "navigationDividerColor": "#07080C",
+  "navigationDividerColorDark": "#07080C",
+  "backgroundColor": "#07080C",
+  "startUrl": "/",
+  "iconUrl": "https://repx.app/icons/icon-512.png",
+  "maskableIconUrl": "https://repx.app/icons/maskable-512.png",
+  "webManifestUrl": "https://repx.app/manifest.webmanifest",
+  "fullScopeUrl": "https://repx.app/",
+  "splashScreenFadeOutDuration": 300,
+  "enableNotifications": false,
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fallbackType": "customtabs",
+  "minSdkVersion": 23,
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [
+    {
+      "name": "Play ranked",
+      "shortName": "Play",
+      "url": "/play",
+      "chosenIconUrl": "https://repx.app/icons/icon-192.png"
+    },
+    {
+      "name": "Leaderboard",
+      "shortName": "Ranks",
+      "url": "/leaderboard",
+      "chosenIconUrl": "https://repx.app/icons/icon-192.png"
+    }
+  ],
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "repx"
+  },
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "generatorApp": "bubblewrap-cli",
+  "fingerprints": []
+}

@@ -44,7 +44,8 @@ const PRIMARY: Destination[] = [
 ];
 
 const SECONDARY: Destination[] = [
-  { to: '/achievements', icon: 'medal', label: 'Achievements' },
+  { to: '/tournaments', icon: 'medal', label: 'Tournaments' },
+  { to: '/achievements', icon: 'star', label: 'Achievements' },
   { to: '/friends', icon: 'users', label: 'Friends' },
   { to: '/notifications', icon: 'bell', label: 'Notifications' },
   { to: '/settings', icon: 'settings', label: 'Settings' },

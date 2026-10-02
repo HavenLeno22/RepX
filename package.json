@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "RepX — the Chess.com of fitness. Competitive, AI-verified bodyweight exercise matches.",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "workspaces": [
     "shared",
     "backend",
@@ -22,10 +22,11 @@
     "db:studio": "npm run db:studio -w @repx/backend",
     "typecheck": "npm run typecheck -w @repx/shared && npm run typecheck -w @repx/backend && npm run typecheck -w @repx/frontend",
     "test": "npm run test -w @repx/shared",
-    "test:e2e": "npm run test:e2e -w @repx/backend"
+    "test:e2e": "npm run test:e2e -w @repx/backend && npm run test:auth -w @repx/backend",
+    "icons": "node frontend/scripts/make-icons.mjs"
   },
   "//test": {
-    "note": "`npm test` is offline: exercise-engine and ELO regression tests in shared/. `npm run test:e2e` drives two real Socket.IO clients through a full match and needs the API running (npm run dev:backend). Frontend component tests are still outstanding — see docs/TESTING.md."
+    "note": "`npm test` is offline: exercise-engine, ELO and tournament-bracket tests in shared/ (64). `npm run test:e2e` needs the API running (npm run dev:backend) and drives two real Socket.IO clients through a full match, then walks the whole account lifecycle — verification, password reset, session revocation, consent and erasure."
   },
   "devDependencies": {
     "concurrently": "^9.1.0",

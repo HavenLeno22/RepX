@@ -81,6 +81,16 @@ optimistic client feedback and authoritative server scoring can never drift apar
 | `npm run db:setup` | Re-create and re-seed the database |
 | `npm run db:studio` | Browse the database in Prisma Studio |
 
+## Shipping it
+
+[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) covers production deployment: the
+environment variables, PostgreSQL and migrations, deploying the API and the
+frontend, setting up Google sign-in, the Google Play release, a pre-launch
+checklist, capacity estimates, and the known limits.
+
+RepX ships to Play as a Trusted Web Activity — the deployed PWA in an Android
+shell, no second codebase. Build reference: [`android/README.md`](android/README.md).
+
 ## Documentation
 
 Start at [`docs/README.md`](docs/README.md) — it indexes every document.
@@ -100,4 +110,4 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) and
 
 ## License
 
-See [`LICENSE`](LICENSE).
+[MIT](LICENSE) © 2026 Haven Leno J

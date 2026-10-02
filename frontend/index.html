@@ -6,13 +6,37 @@
     <!-- Matches --page in global.css. The browser chrome is part of the app's
          first impression on mobile, and a mismatched strip above the status bar
          is the cheapest way to look unfinished. -->
-    <meta name="theme-color" content="#09090B" />
+    <meta name="theme-color" content="#07080C" />
     <meta name="color-scheme" content="dark" />
     <title>RepX — Ranked Fitness</title>
+    <meta
+      name="description"
+      content="Competitive, AI-verified bodyweight exercise matches. 60-second 1v1 rounds with a chess-style rating."
+    />
+
+    <!--
+      Installable. `display: standalone` in the manifest is what removes the
+      browser chrome once installed, which matters more here than in most web
+      apps: RepX is used at arm's length, on a phone propped on a gym floor, and
+      a URL bar is both a distraction and a mis-tap away from losing the match.
+    -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="RepX" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!--
+      Three faces, three jobs. Inter runs the interface. JetBrains Mono holds
+      tabular figures so a leaderboard column never shifts. Barlow Condensed is
+      the athletic voice — it carries headlines, scores and rank plates, and it
+      is the single biggest reason a RepX screen reads as a sport rather than a
+      dashboard. Condensed weights only; the family is never used below 15px.
+    -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,800&family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap"
       rel="stylesheet"
     />
   </head>

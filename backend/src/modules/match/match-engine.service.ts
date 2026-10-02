@@ -8,7 +8,11 @@ import {
   type PoseFrame,
 } from '@repx/shared';
 import { PrismaService } from '../../prisma/prisma.service';
-import { AntiCheatService, type AntiCheatSession } from '../anti-cheat/anti-cheat.service';
+import {
+  AntiCheatService,
+  isDisqualifying,
+  type AntiCheatSession,
+} from '../anti-cheat/anti-cheat.service';
 import { EloService } from '../elo/elo.service';
 import { ProgressionService, type MatchRewards } from '../progression/progression.service';
 
@@ -288,9 +292,32 @@ export class MatchEngineService {
       await this.antiCheat.recordFlags(player.userId, matchId, player.guard.flags);
     }
 
+    /**
+     * A match whose frame stream was manipulated does not settle.
+     *
+     * The flags were previously recorded and then ignored — someone tripping
+     * every high-severity check still banked the rating. Voiding is the
+     * conservative action and the right one: **nobody's rating moves.** That
+     * removes the entire incentive to cheat, because a fabricated stream can no
+     * longer produce a rating gain, while an honest opponent is not punished for
+     * having been matched against a cheat, and a false positive costs a player
+     * one match rather than their ladder position.
+     *
+     * Deliberately *not* an automatic loss or ban. `out_of_order_frames` can be
+     * tripped by a bad network, and an automated punishment that is sometimes
+     * wrong is worse than no automated punishment. The flags persist for a human
+     * to act on when a pattern forms.
+     */
+    const voided = match.players.some((p) => isDisqualifying(p.guard.flags));
+    if (voided) {
+      this.logger.warn(`Voiding match ${matchId}: disqualifying anti-cheat flags`);
+    }
+
     const applied = await this.elo.applyMatchResult({
       matchId,
-      ranked: match.mode === 'ranked',
+      ranked: match.mode === 'ranked' && !voided,
+      // A voided match leaves the career record untouched as well as the rating.
+      counted: !voided,
       players: match.players.map((p) => ({
         userId: p.userId,
         outcome: outcomes.get(p.userId) ?? 'draw',
@@ -300,7 +327,10 @@ export class MatchEngineService {
     const anyForfeit = match.players.some((p) => p.forfeited);
     await this.prisma.match.update({
       where: { id: matchId },
-      data: { status: anyForfeit ? 'forfeited' : 'completed', endedAt: new Date() },
+      data: {
+        status: voided ? 'voided' : anyForfeit ? 'forfeited' : 'completed',
+        endedAt: new Date(),
+      },
     });
 
     const ratings = new Map(applied.map((r) => [r.userId, r]));
@@ -309,7 +339,14 @@ export class MatchEngineService {
     // Progression runs last and deliberately after the rating is committed: XP,
     // achievements and missions all read post-match state, and none of them may
     // be able to fail a settle that has already happened.
-    const rewards = await this.progression.applyMatch({
+    //
+    // A voided match awards nothing either. Withholding the rating but paying
+    // out XP, trophies and mission credit would leave the incentive intact —
+    // a fabricated stream would still farm progression, which is most of what
+    // there is to farm.
+    const rewards = voided
+      ? new Map()
+      : await this.progression.applyMatch({
       matchId,
       mode: match.mode,
       exerciseSlug: match.exerciseSlug,
@@ -327,8 +364,8 @@ export class MatchEngineService {
           ratingBefore: rating?.before ?? p.rating,
           ratingAfter: rating?.after ?? p.rating,
         };
-      }),
-    });
+          }),
+        });
 
     this.matches.delete(matchId);
     for (const p of match.players) this.matchByUser.delete(p.userId);

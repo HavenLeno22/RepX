@@ -15,6 +15,29 @@ export const MATCH_DURATION_SECONDS = 60;
 export const RECONNECT_GRACE_SECONDS = 15;
 
 /**
+ * How long a direct challenge stays open before it lapses.
+ *
+ * Short on purpose. A challenge is an interruption — someone is standing in
+ * front of their camera waiting for an answer — and an invite that lingers for
+ * minutes trains players to ignore the prompt entirely.
+ */
+export const CHALLENGE_EXPIRY_SECONDS = 45;
+
+/**
+ * Private room codes.
+ *
+ * Six characters from an alphabet with I, O, 0 and 1 removed, because these get
+ * read aloud across a gym floor and dictated over voice chat. 32^6 is about a
+ * billion combinations, which is far more than the number of rooms that can be
+ * open at once, so collisions are handled by retrying rather than by queueing.
+ */
+export const ROOM_CODE_LENGTH = 6;
+export const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+/** Rooms with nobody in them are swept after this long. */
+export const ROOM_IDLE_TIMEOUT_MS = 30 * 60 * 1000;
+
+/**
  * How often the server re-evaluates the queue and pushes a fresh status to
  * everyone waiting in it.
  *

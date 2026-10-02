@@ -1,0 +1,69 @@
+# Response headers for Netlify and Cloudflare Pages.
+#
+# Both read this file from the root of the published directory; Vite copies
+# public/ there verbatim, so it ships automatically. On nginx, Vercel or S3 +
+# CloudFront the same values have to be configured in that platform's own way —
+# docs/DEPLOYMENT.md has the translations.
+#
+# The API sets its own headers with helmet (see backend/src/main.ts). This file
+# covers the static bundle, which is the only thing here that ever returns HTML
+# and therefore the only place a Content-Security-Policy does any work.
+
+/*
+  # Clickjacking. The app is never meant to be framed by anyone.
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+
+  # Hardware. `camera=(self)` is the one permission RepX genuinely needs, and
+  # naming it here means a compromised third-party script still cannot reach the
+  # camera from an embedded context. Everything else is switched off explicitly
+  # rather than left to the browser's default, which varies.
+  Permissions-Policy: camera=(self), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()
+
+  # Content-Security-Policy — each source below is load-bearing. Removing one
+  # breaks a specific feature, so they are annotated rather than trusted:
+  #
+  #   'wasm-unsafe-eval'        MediaPipe's pose model is WebAssembly. Without
+  #                             this the arena fails to start and the console
+  #                             says only "CompileError". It does NOT permit
+  #                             eval() of JavaScript — that is 'unsafe-eval',
+  #                             which is deliberately absent.
+  #   accounts.google.com       Google Identity Services SDK + its sign-in iframe.
+  #   appleid.cdn-apple.com     Sign in with Apple SDK.
+  #   cdn.jsdelivr.net          MediaPipe WASM runtime (see lib/pose.ts).
+  #   storage.googleapis.com    The pose_landmarker .task model file.
+  #   blob: in worker-src       MediaPipe spawns its workers from blobs.
+  #   blob: in media-src        The camera stream is attached to <video> as a blob.
+  #   'unsafe-inline' in style  framer-motion animates via inline styles, and the
+  #                             login screen ships a <style> block. Nonces are not
+  #                             workable against a runtime animation library.
+  #
+  # connect-src must list YOUR deployed API over both https and wss — the
+  # WebSocket is a separate scheme and is NOT covered by the https entry. Replace
+  # api.repx.app below when the host is decided; getting this wrong shows up as
+  # matchmaking that spins forever with a CSP violation in the console.
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://appleid.cdn-apple.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://lh3.googleusercontent.com; media-src 'self' blob:; worker-src 'self' blob:; connect-src 'self' https://api.repx.app wss://api.repx.app https://cdn.jsdelivr.net https://storage.googleapis.com; frame-src https://accounts.google.com https://appleid.apple.com; manifest-src 'self'
+
+# Fingerprinted by Vite: the URL changes whenever the content does, so this can
+# be cached permanently and never revalidated.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Must NOT be cached hard. A stale service worker is the one way to permanently
+# break a returning user, and this file is how a fixed one reaches them.
+/sw.js
+  Cache-Control: no-cache
+
+/manifest.webmanifest
+  Cache-Control: public, max-age=3600
+
+# Digital Asset Links. Chrome fetches this to decide whether the Play app may
+# run without a URL bar, and it is strict: it must be served as JSON, from
+# https, with no redirect. Caching it hard would mean a fingerprint correction
+# takes a day to take effect on devices that already fetched the old one.
+/.well-known/assetlinks.json
+  Content-Type: application/json
+  Cache-Control: public, max-age=300
+  Access-Control-Allow-Origin: *

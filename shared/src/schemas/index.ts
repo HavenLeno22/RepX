@@ -36,6 +36,87 @@ export const refreshSchema = z.object({
   refreshToken: z.string().min(1),
 });
 
+/* -------------------------------------------------- verification & reset -- */
+
+export const requestPasswordResetSchema = z.object({
+  email: z.string().email('Enter a valid email address'),
+});
+export type RequestPasswordResetInput = z.infer<typeof requestPasswordResetSchema>;
+
+/**
+ * The same minimum as registration, enforced from one constant so the two can
+ * never disagree — a reset form that accepts a weaker password than signup is a
+ * downgrade attack on your own policy.
+ */
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+
+export const verifyEmailSchema = z.object({
+  token: z.string().min(1),
+});
+export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
+
+/* ----------------------------------------------------------------- oauth -- */
+
+export const OAUTH_PROVIDERS = ['google', 'apple'] as const;
+export type OAuthProvider = (typeof OAUTH_PROVIDERS)[number];
+
+/**
+ * Sign-in with a provider ID token.
+ *
+ * The client completes the provider's own flow and hands the resulting ID token
+ * here; the server verifies it against the provider's published JWKS. Nothing
+ * about the user — not the email, not the subject id — is trusted from the
+ * request body, because all of it is inside the signed token and taking it from
+ * anywhere else would let a caller sign in as anyone.
+ *
+ * `username` is the one exception, and only for a first-time signup: providers
+ * do not supply a ladder name, so the client may suggest one. It is ignored when
+ * the account already exists.
+ */
+export const oauthSignInSchema = z.object({
+  provider: z.enum(OAUTH_PROVIDERS),
+  idToken: z.string().min(1),
+  username: z
+    .string()
+    .min(3, 'Username must be at least 3 characters')
+    .max(20, 'Username must be at most 20 characters')
+    .regex(/^[a-zA-Z0-9_]+$/, 'Letters, numbers and underscores only')
+    .optional(),
+});
+export type OAuthSignInInput = z.infer<typeof oauthSignInSchema>;
+
+/* --------------------------------------------------------------- consent -- */
+
+/**
+ * The version of the privacy terms a player agreed to.
+ *
+ * Bumping this string is what re-prompts everyone: consent to an earlier policy
+ * is not consent to a later one, so the check is equality against the current
+ * version rather than "has consented at all".
+ */
+export const CONSENT_VERSION = '2026-08-03';
+
+export const grantConsentSchema = z.object({
+  version: z.string().min(1),
+});
+export type GrantConsentInput = z.infer<typeof grantConsentSchema>;
+
+/**
+ * Account deletion.
+ *
+ * Requires the user to type their own username. A deletion that happens on one
+ * click is a deletion that happens by accident, and this one cascades through
+ * every match, rating and trophy the person ever earned.
+ */
+export const deleteAccountSchema = z.object({
+  confirmUsername: z.string().min(1),
+});
+export type DeleteAccountInput = z.infer<typeof deleteAccountSchema>;
+
 /* ------------------------------------------------------------------ user -- */
 
 export const publicUserSchema = z.object({
@@ -58,6 +139,16 @@ export const publicUserSchema = z.object({
   /** Consecutive calendar days with at least one match. */
   dayStreak: z.number(),
   createdAt: z.string(),
+
+  /**
+   * Sent as a boolean rather than the stored timestamp: the client only ever
+   * asks "should I show the confirm-your-address banner", and shipping the exact
+   * moment of verification to every viewer of a public profile is more than that
+   * question needs.
+   */
+  emailVerified: z.boolean(),
+  /** The privacy terms version this player accepted, or null if they never have. */
+  consentVersion: z.string().nullable(),
 });
 export type PublicUser = z.infer<typeof publicUserSchema>;
 
@@ -119,6 +210,130 @@ export const submitFrameSchema = z.object({
 export type SubmitFrameInput = z.infer<typeof submitFrameSchema>;
 
 export const matchIdSchema = z.object({ matchId: z.string().min(1) });
+
+/* ------------------------------------------------------------ challenge -- */
+
+/**
+ * A direct challenge: one named player asking one other for a match, outside the
+ * queue entirely. The exercise and mode are fixed by the challenger, so the
+ * person accepting knows exactly what they are agreeing to before they say yes.
+ */
+export const sendChallengeSchema = z.object({
+  toUserId: z.string().min(1),
+  exerciseSlug: z.string().min(1),
+  mode: z.enum(MATCH_MODES),
+});
+export type SendChallengeInput = z.infer<typeof sendChallengeSchema>;
+
+export const challengeIdSchema = z.object({ challengeId: z.string().min(1) });
+export type ChallengeIdInput = z.infer<typeof challengeIdSchema>;
+
+export interface ChallengeSummary {
+  challengeId: string;
+  from: PublicUser;
+  to: PublicUser;
+  exerciseSlug: string;
+  mode: MatchMode;
+  expiresAt: number;
+}
+
+/* ----------------------------------------------------------------- room -- */
+
+/**
+ * A private room. Unranked by definition — the whole point is to play someone
+ * you chose, and a rating earned against an opponent you picked is not a rating.
+ */
+export const createRoomSchema = z.object({
+  exerciseSlug: z.string().min(1),
+});
+export type CreateRoomInput = z.infer<typeof createRoomSchema>;
+
+export const joinRoomSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .length(6, 'A room code is six characters'),
+});
+export type JoinRoomInput = z.infer<typeof joinRoomSchema>;
+
+export const roomExerciseSchema = z.object({
+  exerciseSlug: z.string().min(1),
+});
+
+export interface RoomOccupant {
+  userId: string;
+  username: string;
+  avatarUrl: string | null;
+  rating: number;
+  ready: boolean;
+}
+
+export interface RoomState {
+  code: string;
+  hostId: string;
+  exerciseSlug: string;
+  occupants: RoomOccupant[];
+}
+
+/* ----------------------------------------------------------- tournament -- */
+
+export const TOURNAMENT_STATUSES = ['open', 'live', 'finished', 'cancelled'] as const;
+export type TournamentStatus = (typeof TOURNAMENT_STATUSES)[number];
+
+export const tournamentIdSchema = z.object({ tournamentId: z.string().min(1) });
+
+export const createTournamentSchema = z.object({
+  name: z.string().min(3).max(60),
+  exerciseSlug: z.string().min(1),
+  /** Registration cap. Bracket size is derived from who actually turns up. */
+  maxEntrants: z.number().int().min(2).max(128),
+});
+export type CreateTournamentInput = z.infer<typeof createTournamentSchema>;
+
+export interface TournamentEntrantSummary {
+  userId: string;
+  username: string;
+  avatarUrl: string | null;
+  rating: number;
+  seed: number | null;
+  eliminated: boolean;
+}
+
+export interface TournamentMatchSummary {
+  id: string;
+  round: number;
+  position: number;
+  aUserId: string | null;
+  bUserId: string | null;
+  winnerId: string | null;
+  /** The live match this bracket slot is being played out in, once it starts. */
+  matchId: string | null;
+  status: 'pending' | 'ready' | 'live' | 'done';
+}
+
+export interface TournamentSummary {
+  id: string;
+  name: string;
+  exerciseSlug: string;
+  status: TournamentStatus;
+  maxEntrants: number;
+  entrantCount: number;
+  /** Present once the draw is made. */
+  rounds: number;
+  championId: string | null;
+  createdAt: string;
+  startedAt: string | null;
+}
+
+export interface TournamentDetail extends TournamentSummary {
+  entrants: TournamentEntrantSummary[];
+  matches: TournamentMatchSummary[];
+  /** Whether the viewer is registered. */
+  joined: boolean;
+  /** The viewer's next playable bracket slot, if it is their turn. */
+  yourMatchId: string | null;
+}
 
 /* --------------------------------------------------- websocket: server→client -- */
 

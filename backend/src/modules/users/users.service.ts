@@ -35,8 +35,19 @@ export class UsersService {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) throw new NotFoundException('Player not found');
 
+    /**
+     * Forfeits count.
+     *
+     * This asked for `status: 'completed'` only, while the win/loss counters on
+     * the User row are incremented for forfeited matches too — so a player who
+     * won on a walkover saw the win in their record and in their rating, and
+     * then could not find the match anywhere on their own profile. The battle
+     * history and the mission counters already include forfeits; this was the
+     * one place that disagreed. Voided matches stay out, deliberately: they
+     * settled nothing and moved nothing.
+     */
     const participations = await this.prisma.matchParticipant.findMany({
-      where: { userId: id, match: { status: 'completed' } },
+      where: { userId: id, match: { status: { in: ['completed', 'forfeited'] } } },
       include: {
         match: { include: { participants: { include: { user: true } } } },
       },

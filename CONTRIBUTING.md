@@ -2,9 +2,12 @@
 
 ## Status
 
-This repository is in its pre-implementation phase. These guidelines describe the
-intended contribution workflow once application code lands; some sections are
-placeholders until CI and package scripts exist (see [`docs/IMPLEMENT.md`](docs/IMPLEMENT.md)).
+RepX is playable end to end: `shared/`, `backend/`, `frontend/` and the
+`android/` TWA shell are implemented, and the root `package.json` has working
+`setup`, `dev`, `typecheck`, `test` and `build` scripts (see the
+[README](README.md#quick-start)). [`docs/IMPLEMENT.md`](docs/IMPLEMENT.md) lists
+exactly what is and isn't built. The GitHub Actions workflows are still
+placeholders, so run the checks locally before opening a pull request.
 
 ## Before you start
 
@@ -24,8 +27,9 @@ placeholders until CI and package scripts exist (see [`docs/IMPLEMENT.md`](docs/
 3. Write or update tests alongside code changes (see [`docs/TESTING.md`](docs/TESTING.md)).
 4. Open a pull request using the template in
    [`.github/pull_request_template.md`](.github/pull_request_template.md).
-5. CI must pass (lint, typecheck, test, build) before merge — see
-   [`.github/workflows/`](.github/workflows/).
+5. `npm run typecheck`, `npm test` and `npm run build` must pass before merge.
+   Changes to matchmaking, matches or accounts should also pass
+   `npm run test:e2e` against a running backend (`npm run dev:backend`).
 6. At least one approving review is required before merge.
 
 ## Commit messages

@@ -1,7 +1,8 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AppBar, Rail, TabBar } from './components/nav';
+import { OfflineBanner } from './components/OfflineBanner';
 import { Toasts } from './components/Toasts';
 import { useMatchSocket } from './hooks/useMatchSocket';
 import { PAGE } from './lib/motion';
@@ -17,18 +18,46 @@ import { Onboarding, hasOnboarded } from './pages/Onboarding';
 import { Play } from './pages/Play';
 import { Profile } from './pages/Profile';
 import { Result } from './pages/Result';
+import { CONSENT_VERSION } from '@repx/shared';
+import { ConsentGate, ForgotPassword, ResetPassword, VerifyEmail } from './pages/Account';
+import { DeleteAccount } from './pages/DeleteAccount';
+import { Privacy } from './pages/Privacy';
 import { Settings } from './pages/Settings';
+import { Terms } from './pages/Terms';
+import { Tournaments } from './pages/Tournaments';
+import { IncomingChallenge } from './components/play-dialogs';
 import { useAuth } from './store/auth';
+import { useConnection } from './store/connection';
 import { useSummary } from './store/summary';
 
 export function App() {
-  const { user, ready, restore } = useAuth();
+  const { user, ready, restore, refreshUser } = useAuth();
   const refreshSummary = useSummary((s) => s.refresh);
+  const reachable = useConnection((s) => s.reachable);
   const location = useLocation();
 
   useEffect(() => {
     void restore();
   }, [restore]);
+
+  /**
+   * Come back on our own once the API is answering again.
+   *
+   * A restore that failed because the server was unreachable deliberately keeps
+   * the stored tokens (see store/auth.ts), so all that is missing is a second
+   * attempt. Without this the player sits on the sign-in screen with a perfectly
+   * valid session in localStorage, waiting for a reload nobody told them to do.
+   *
+   * Fires only on the false → true edge, not whenever `reachable` is true:
+   * `reachable` starts true, so a plain truthiness check would race the boot
+   * restore above and connect the socket twice on every cold start.
+   */
+  const wasReachable = useRef(reachable);
+  useEffect(() => {
+    const cameBack = reachable && !wasReachable.current;
+    wasReachable.current = reachable;
+    if (cameBack && !user) void restore();
+  }, [reachable, user, restore]);
 
   // The progression snapshot backs the navigation badge as well as the home
   // screen, so it is fetched once here rather than by whichever screen happens
@@ -54,10 +83,36 @@ export function App() {
 
   if (!user) {
     return (
-      <Routes>
+      <>
+        {/*
+          Mounted on the signed-out tree too. If the API is down, the sign-in
+          form is exactly where somebody hits it first, and "Incorrect email or
+          password" would be a lie.
+        */}
+        <OfflineBanner />
+        <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
+        {/*
+          Reachable signed out, and they have to be: every one of these is
+          arrived at from outside the app — a link in an email, or a privacy
+          policy someone wants to read *before* handing over an address.
+          Bouncing them to /login would strand the token in a URL they have
+          already navigated away from.
+
+          /delete-account is signed-out for a harder reason than the rest:
+          Google Play requires the deletion route to be reachable without an
+          account, from a URL pasted into the store listing. Someone who has
+          already uninstalled the app has to be able to land here.
+        */}
+        <Route path="/verify" element={<VerifyEmail />} />
+        <Route path="/forgot" element={<ForgotPassword />} />
+        <Route path="/reset" element={<ResetPassword />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/delete-account" element={<DeleteAccount />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </>
     );
   }
 
@@ -80,6 +135,21 @@ export function App() {
       </Routes>
     );
   }
+
+  /**
+   * Camera consent, gated on the lobby rather than the arena.
+   *
+   * The arena is where the camera actually opens, but by then the player has an
+   * opponent waiting and a countdown running — asking a legal question at that
+   * moment is both bad manners and bad consent, because the only real answer
+   * available is yes. Asking in the lobby, before anyone is matched, leaves
+   * declining as a genuine option.
+   *
+   * Re-prompts whenever the terms version moves: agreeing to an earlier policy
+   * is not agreeing to a later one.
+   */
+  const consentCurrent = user.consentVersion === CONSENT_VERSION;
+  const needsConsent = !consentCurrent && location.pathname === '/play';
 
   return (
     <div className="app">
@@ -107,6 +177,13 @@ export function App() {
                 <Route path="/play" element={<Play />} />
                 <Route path="/result" element={<Result />} />
                 <Route path="/leaderboard" element={<Leaderboard />} />
+                <Route path="/tournaments" element={<Tournaments />} />
+                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/terms" element={<Terms />} />
+                <Route path="/delete-account" element={<DeleteAccount />} />
+                <Route path="/verify" element={<VerifyEmail />} />
+                <Route path="/reset" element={<ResetPassword />} />
+                <Route path="/forgot" element={<ForgotPassword />} />
                 <Route path="/battles" element={<Battles />} />
                 <Route path="/achievements" element={<Achievements />} />
                 <Route path="/friends" element={<Friends />} />
@@ -122,6 +199,14 @@ export function App() {
       </main>
       <TabBar />
       <Toasts />
+      {/*
+        Mounted at the root, not on the lobby: a challenge can arrive while the
+        player is anywhere in the app, and an invite you only see if you happen
+        to be looking at the Play screen is not an invite.
+      */}
+      <IncomingChallenge />
+      <OfflineBanner />
+      {needsConsent && <ConsentGate onGranted={() => void refreshUser()} />}
     </div>
   );
 }

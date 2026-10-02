@@ -22,14 +22,24 @@
 
 :root {
   /* =========================================================== surfaces == */
-  --page: #09090b;
-  --surface: #111217;
-  --card: #1a1b22;
+  /* The ramp carries a blue-steel undertone rather than being neutral grey.
+     Neutral grey under a lime accent reads as office software; the cool cast
+     reads as floodlit metal. Mirrors palette.ts. */
+  --page: #07080c;
+  --surface: #0e1016;
+  --card: #15181f;
   /* One step above a card, for insets and pressed states. Derived by tinting,
      never by inventing a new grey. */
-  --card-2: #21232b;
-  --line: #2a2d36;
-  --line-soft: #1f2229;
+  --card-2: #1c202a;
+  --line: #2b303c;
+  --line-soft: #1f2430;
+
+  /* Every surface in the arena is lit from above, so a card is a *gradient*
+     between these two stops rather than a flat fill. Tokenised as a pair so
+     "the card gradient" is one decision, not thirty. */
+  --card-lit: #1c2029;
+  --card-shade: #12141b;
+  --surface-lit: #141821;
 
   /* =============================================================== brand == */
   --brand: #b6ff3b; /* Electric Lime — CTA, rank, XP, progress, live, selection */
@@ -68,6 +78,25 @@
      but their stops can — which is what stops "a lime glow" being written five
      slightly different ways across five files. */
   --brand-bloom: rgba(182, 255, 59, 0.13);
+
+  /* ============================================================== brass == */
+  /**
+   * The progression metal.
+   *
+   * Lime was previously carrying two unrelated jobs: "press this" and "you are
+   * making progress". Seventy-five lime references across the app is why none of
+   * them read as urgent — a colour used for everything signals nothing.
+   *
+   * Progress, XP, levels and completed work are struck in brass instead. It is
+   * warm where lime is cold, it belongs to the same trophy-and-plate world as
+   * --gold, and it leaves lime free to mean exactly one thing: act now.
+   */
+  --brass: #e0a742;
+  --brass-lit: #ffd98a; /* the polished highlight along a brass edge */
+  --brass-deep: #9a6b1f; /* the shaded underside */
+  --brass-wash: rgba(224, 167, 66, 0.12);
+  --brass-veil: rgba(224, 167, 66, 0.22);
+  --brass-edge: rgba(224, 167, 66, 0.38);
 
   /**
    * Text and marks that sit on media — the camera feed, a dark photo.
@@ -156,6 +185,12 @@
   /* =============================================================== type == */
   --font: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+  /* The athletic voice: headlines, scores, rank plates, section labels. Inter
+     is a superb interface face and a neutral one — it will never say "sport" on
+     its own. Condensed heavy type is what stadium signage, race bibs and team
+     jerseys are set in, and it is doing that job here. Never below 15px, where
+     condensed letterforms stop being legible. */
+  --display: 'Barlow Condensed', 'Inter', system-ui, sans-serif;
 
   /* ============================================================= motion == */
   /* Four durations. More than four and nobody can tell them apart; fewer and
@@ -180,6 +215,90 @@
   --content: 1160px;
   --safe-b: env(safe-area-inset-bottom, 0px);
   --safe-t: env(safe-area-inset-top, 0px);
+
+  /* ========================================================== materials == */
+  /**
+   * What separates a game client from a dashboard is not colour, it is
+   * *material*. A dashboard draws rectangles; a game draws lit objects. These
+   * tokens are the lighting model — an edge catches the light at the top, falls
+   * into shadow at the bottom, and sits on a surface with visible grain.
+   *
+   * Kept as tokens rather than written inline so the whole product can be
+   * re-lit by editing eight values.
+   */
+  --bevel: rgba(255, 255, 255, 0.07); /* the lit top edge of any raised object */
+  --bevel-strong: rgba(255, 255, 255, 0.14);
+  --bevel-ink: rgba(255, 255, 255, 0.22); /* on a coloured fill, not a dark one */
+  --undershadow: rgba(0, 0, 0, 0.5); /* the dark bottom edge that gives it mass */
+  --recess: inset 0 2px 5px rgba(0, 0, 0, 0.5); /* things pressed *into* a surface */
+
+  /** The standard raised-panel skin: lit top, shaded bottom, bevelled edge. */
+  --skin-card: linear-gradient(180deg, var(--card-lit), var(--card-shade));
+  --skin-raised: linear-gradient(180deg, var(--card-2), var(--card));
+  --edge-card: inset 0 1px 0 var(--bevel), inset 0 0 0 1px var(--line-soft);
+
+  /**
+   * The plate.
+   *
+   * Everything raised in RepX is struck metal under a floodlight, and this is
+   * the three-part recipe that says so: a lit top edge, a hairline that holds
+   * the silhouette, and a dark undershadow that gives the object mass. A card
+   * with only a border is a rectangle; a card with all three is an object
+   * sitting on a surface.
+   *
+   * `--plate-edge` is the skin; `--plate-drop` is the shadow it casts. They are
+   * separate because insets and drop shadows compose differently — the drop is
+   * omitted on anything flush against another surface.
+   */
+  --plate-edge: inset 0 1px 0 var(--bevel-strong), inset 0 -1px 0 var(--undershadow),
+    inset 0 0 0 1px var(--line-soft);
+  --plate-drop: 0 1px 1px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.34);
+  --plate-drop-lg: 0 2px 2px rgba(0, 0, 0, 0.45), 0 18px 48px rgba(0, 0, 0, 0.5);
+
+  /* ========================================================= atmosphere == */
+  /**
+   * The arena is lit, and the light has a position.
+   *
+   * A flat #07080c page is what makes a dark app read as a settings screen. The
+   * three layers below give the void somewhere to be: a key light hanging above
+   * and slightly left, a cold rim from the right, and a floor that recedes.
+   * They cost one fixed pseudo-element and never scroll, so the app feels like a
+   * room the content moves through rather than a document.
+   */
+  --key-light: radial-gradient(
+    ellipse 90% 55% at 22% -10%,
+    rgba(182, 255, 59, 0.07),
+    transparent 60%
+  );
+  --rim-light: radial-gradient(
+    ellipse 60% 50% at 100% 8%,
+    rgba(51, 243, 255, 0.05),
+    transparent 62%
+  );
+  --floor-haze: radial-gradient(ellipse 120% 40% at 50% 100%, rgba(20, 26, 38, 0.85), transparent 70%);
+  --vignette: radial-gradient(ellipse 92% 78% at 50% 42%, transparent 42%, rgba(0, 0, 0, 0.55));
+
+  /* =========================================================== textures == */
+  /**
+   * Three tiling SVGs, inlined as data URIs.
+   *
+   * Inlined rather than shipped as files because each is under 300 bytes and a
+   * texture that arrives one frame late is worse than no texture. No external
+   * host is involved, so these keep working with the network off — which is a
+   * requirement, not a nicety: RepX is used in gyms and garages.
+   */
+
+  /* Film grain. The single highest-value texture in the set: it kills the
+     flatness of large dark fills and hides the banding that dark gradients
+     produce on 8-bit panels. */
+  --tx-grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='160' height='160' filter='url(%23g)'/></svg>");
+
+  /* Arena floor grid. Reads as a marked-out court under raking light. */
+  --tx-grid: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='72' height='72'><path d='M72 0H0v72' fill='none' stroke='%23ffffff' stroke-opacity='0.035' stroke-width='1'/></svg>");
+
+  /* Diagonal safety hatch — the stripe on gym equipment and start gates. Used
+     sparingly, on edges and locked states. */
+  --tx-hatch: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><path d='M-2 2L2 -2M0 10L10 0M8 12L12 8' stroke='%23ffffff' stroke-opacity='0.05' stroke-width='2.2'/></svg>");
 }
 
 /**
@@ -231,6 +350,47 @@ body {
   /* App chrome does not rubber-band or flash blue like a document. */
   overscroll-behavior-y: none;
   -webkit-tap-highlight-color: transparent;
+  position: relative;
+}
+
+/**
+ * The arena.
+ *
+ * Two fixed layers behind everything, neither of which scrolls — so the content
+ * travels through a lit room instead of the room travelling with it.
+ *
+ * `body::before` is the light: a lime key hanging above and left, a cold cyan
+ * rim from the right, haze pooling on the floor, and a vignette pulling the
+ * corners down so the eye lands in the middle third where the content is.
+ *
+ * `body::after` is the grain. It is the highest-value texture in the set and the
+ * cheapest: it kills the flatness of large dark fills and hides the banding that
+ * dark gradients produce on 8-bit panels. At 0.03 it is invisible as texture and
+ * obvious in its absence.
+ */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: var(--key-light), var(--rim-light), var(--floor-haze), var(--vignette);
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: var(--tx-grain);
+}
+
+/* Everything the app draws sits above the atmosphere. */
+#root {
+  position: relative;
+  z-index: 1;
 }
 
 button,
@@ -283,31 +443,50 @@ img {
 
 /* ============================================================ typography == */
 
-/* The scale. Display sizes carry heavy negative tracking because at 40px+ Inter's
-   default spacing reads loose and editorial rather than athletic. */
+/**
+ * The scale.
+ *
+ * Display sizes are set in Barlow Condensed, not Inter. This is the single
+ * decision that separates a RepX screen from a fitness dashboard: condensed
+ * heavy type is what stadium signage, race bibs, weigh-in posters and team
+ * jerseys are set in, and reading it triggers "sport" before a single word is
+ * parsed. Inter is a superb interface face and a completely neutral one — it
+ * will never say sport on its own, no matter how much negative tracking it gets.
+ *
+ * Condensed letterforms need *positive* tracking in caps and near-zero at
+ * display sizes, which is the opposite of what Inter wanted. Never below 15px,
+ * where the counters close up and legibility goes.
+ */
 .t-dxl {
-  font-size: clamp(38px, 7vw, 60px);
-  font-weight: 900;
-  letter-spacing: -2.4px;
-  line-height: 1.02;
+  font-family: var(--display);
+  font-size: clamp(46px, 8.4vw, 76px);
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 0.94;
+  text-transform: uppercase;
 }
 .t-dlg {
-  font-size: clamp(30px, 5vw, 42px);
-  font-weight: 900;
-  letter-spacing: -1.6px;
-  line-height: 1.06;
+  font-family: var(--display);
+  font-size: clamp(34px, 5.6vw, 52px);
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  line-height: 0.98;
+  text-transform: uppercase;
 }
 .t-h1 {
-  font-size: 28px;
+  font-family: var(--display);
+  font-size: 34px;
   font-weight: 800;
-  letter-spacing: -1px;
-  line-height: 1.14;
+  letter-spacing: 0;
+  line-height: 1.04;
+  text-transform: uppercase;
 }
 .t-h2 {
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: -0.6px;
-  line-height: 1.2;
+  font-family: var(--display);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  line-height: 1.1;
 }
 .t-h3 {
   font-size: 18px;
@@ -334,12 +513,19 @@ img {
   line-height: 1.5;
   font-weight: 600;
 }
-/* The smallest type in the product. 11.5px with heavy weight, wide tracking and
-   uppercase — legible because of its treatment, not despite its size. */
+/**
+ * The smallest type in the product, and the one that does the most work.
+ *
+ * Set in condensed caps with wide tracking, this is trackside signage: the strip
+ * above a scoreboard figure, the label stencilled on equipment. It is legible
+ * because of its treatment, not despite its size — condensed caps at heavy
+ * weight hold their shape well below where a lowercase face would mush.
+ */
 .t-caption {
-  font-size: 11.5px;
-  font-weight: 800;
-  letter-spacing: 0.8px;
+  font-family: var(--display);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
   text-transform: uppercase;
   line-height: 1.3;
 }
@@ -410,10 +596,32 @@ img {
   margin-bottom: var(--s5);
   flex-wrap: wrap;
 }
+/**
+ * The page title, treated as a stadium nameplate rather than an article
+ * heading: condensed caps, a lime tick struck against the baseline, and the
+ * hairline that runs to the edge of the content column. The tick is the same
+ * mark the rail uses for the active destination, so "where am I" is answered by
+ * the same shape in two places.
+ */
 .head__t {
-  font-size: 30px;
-  font-weight: 900;
-  letter-spacing: -1.2px;
+  font-family: var(--display);
+  font-size: clamp(34px, 4.4vw, 46px);
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  line-height: 1;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+}
+.head__t::before {
+  content: '';
+  width: 5px;
+  height: 0.72em;
+  border-radius: 1px;
+  background: linear-gradient(180deg, var(--brand), var(--brass));
+  box-shadow: 0 0 14px var(--brand-veil);
+  flex-shrink: 0;
 }
 .head__actions {
   display: flex;
@@ -478,17 +686,38 @@ img {
 
 /* ================================================================== rail == */
 
+/**
+ * The rail.
+ *
+ * A game client's rail is a physical fixture bolted to the side of the arena,
+ * not a document sidebar. It gets its own darker ground, a faint floor grid so
+ * it reads as a surface rather than a void, and a lit inner edge where it meets
+ * the content — the same key light that lifts every panel, catching the seam.
+ */
 .rail {
   width: var(--rail);
   flex-shrink: 0;
-  background: var(--surface);
-  border-right: 1px solid var(--line-soft);
+  background: linear-gradient(180deg, var(--surface-lit), var(--surface) 30%, var(--page));
+  border-right: none;
+  box-shadow: inset -1px 0 0 var(--line-soft), 1px 0 24px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
   padding: var(--s4) var(--s3);
   position: sticky;
   top: 0;
   height: 100vh;
+  z-index: 20;
+}
+.rail::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: var(--tx-grid);
+  opacity: 0.5;
+  pointer-events: none;
+}
+.rail > * {
+  position: relative;
 }
 
 .rail__brand {
@@ -496,9 +725,11 @@ img {
   align-items: center;
   gap: var(--s2);
   padding: var(--s1) var(--s2) var(--s5);
-  font-weight: 900;
-  font-size: 22px;
-  letter-spacing: -1px;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 30px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
   color: var(--text);
 }
 
@@ -523,11 +754,16 @@ img {
   display: flex;
   align-items: center;
   gap: var(--s3);
-  padding: 10px 12px;
+  padding: 11px 12px;
   border-radius: var(--r-input);
   color: var(--text-2);
-  font-weight: 600;
-  font-size: 14.5px;
+  /* Destinations are stencilled, not written: condensed caps at a small size,
+     the way a locker room or a tunnel door is labelled. */
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
   position: relative;
   transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
 }
@@ -536,8 +772,9 @@ img {
   color: var(--text);
 }
 .rail__link--active {
-  background: var(--card);
+  background: linear-gradient(90deg, var(--brand-wash), transparent 70%);
   color: var(--text);
+  box-shadow: inset 0 1px 0 var(--bevel);
 }
 /* The active marker is a lime bar rather than a lime background: the rail has
    seven items and seven lime fills would spend the brand colour on navigation. */
@@ -613,9 +850,11 @@ img {
   display: flex;
   align-items: center;
   gap: var(--s2);
-  font-weight: 900;
-  font-size: 18px;
-  letter-spacing: -0.7px;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 24px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
 }
 
 .appbar__spacer {
@@ -678,9 +917,13 @@ img {
   justify-content: center;
   gap: 3px;
   color: var(--text-3);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.2px;
+  /* Stencilled to match the desktop rail, so the same destination is lettered
+     the same way whichever chrome the player is looking at. */
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
   position: relative;
   /* 44px minimum touch target, guaranteed by the tab bar height. */
   min-height: 44px;
@@ -737,11 +980,38 @@ img {
 
 /* ================================================================= panel == */
 
+/**
+ * The panel — the most-repeated object in the product, and the one that decides
+ * whether RepX reads as a game client or a admin console.
+ *
+ * It was a flat fill with a border, which is a rectangle. It is now a plate: lit
+ * along the top edge where the arena key light catches it, shaded at the bottom,
+ * a hairline holding the silhouette, and a real shadow underneath giving it
+ * mass. The gradient is only four steps of luminance — the effect is not colour,
+ * it is the *implication of a light source*, which is the whole difference
+ * between a drawn rectangle and a lit object.
+ */
 .panel {
-  background: var(--card);
-  border: 1px solid var(--line-soft);
+  background: var(--skin-card);
+  border: none;
   border-radius: var(--r-card);
   overflow: hidden;
+  position: relative;
+  box-shadow: var(--plate-edge), var(--plate-drop);
+}
+
+/* The rail of light along the top edge. Stops short of the corners so it reads
+   as a highlight catching a bevel rather than a border that failed to close. */
+.panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 14%;
+  right: 14%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--bevel-strong), transparent);
+  pointer-events: none;
+  z-index: 2;
 }
 
 .panel__head {
@@ -751,15 +1021,36 @@ img {
   align-items: center;
   justify-content: space-between;
   gap: var(--s3);
-  min-height: 48px;
+  min-height: 50px;
+  /* The header sits fractionally proud of the body, the way a struck plate's
+     top section catches more light than its face. */
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.028), transparent);
 }
 
 .panel__title {
-  font-size: 11.5px;
-  font-weight: 800;
-  letter-spacing: 0.9px;
+  font-family: var(--display);
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
-  color: var(--text-3);
+  color: var(--text-2);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+}
+/* A short brass rule before the section label — the tick on a scoreboard truss.
+   Brass rather than lime: a section heading is not an action. Scoped to the
+   leading title only, because a panel header can carry a second `.panel__title`
+   as a right-hand column label ("Rating"), and a tick on that reads as a second
+   heading rather than a column head. */
+.panel__head > .panel__title:first-child::before {
+  content: '';
+  width: 3px;
+  height: 13px;
+  border-radius: 1px;
+  background: var(--brass);
+  opacity: 0.85;
+  flex-shrink: 0;
 }
 
 .panel__link {
@@ -826,20 +1117,41 @@ img {
   cursor: not-allowed;
 }
 
+/**
+ * The primary action, struck rather than filled.
+ *
+ * A flat lime rectangle is a web button. The same lime with a lit top edge, a
+ * darker underside and a hairline of its own colour is a *key* — a physical
+ * thing that depresses. The gradient runs only 8% of luminance; any more and it
+ * stops reading as one material catching light and starts reading as two
+ * colours.
+ */
 .btn--primary {
-  background: var(--brand);
+  background: linear-gradient(180deg, #c8ff5e, var(--brand) 52%, #a2e82c);
   color: var(--brand-ink);
+  box-shadow: inset 0 1px 0 var(--bevel-ink), inset 0 -1px 0 rgba(0, 0, 0, 0.22),
+    0 2px 10px rgba(0, 0, 0, 0.35);
+  font-weight: 800;
 }
 .btn--primary:hover:not(:disabled) {
-  box-shadow: 0 0 0 1px var(--brand), 0 6px 20px var(--brand-veil);
+  box-shadow: inset 0 1px 0 var(--bevel-ink), inset 0 -1px 0 rgba(0, 0, 0, 0.22),
+    0 4px 18px var(--brand-veil), 0 0 0 1px var(--brand-edge);
+}
+.btn--primary:active:not(:disabled) {
+  background: linear-gradient(180deg, #a2e82c, var(--brand));
+  box-shadow: var(--sh-pressed);
 }
 
 .btn--ghost {
-  background: var(--card-2);
+  background: var(--skin-raised);
   color: var(--text);
+  box-shadow: var(--plate-edge);
 }
 .btn--ghost:hover:not(:disabled) {
-  background: var(--e3);
+  background: linear-gradient(180deg, var(--e3), var(--card-2));
+}
+.btn--ghost:active:not(:disabled) {
+  box-shadow: var(--recess);
 }
 
 .btn--outline {
@@ -902,12 +1214,17 @@ img {
  * rather than the colour changing, because the colour is already the answer.
  */
 .btn--play {
-  background: var(--brand);
+  background: linear-gradient(180deg, #ccff6b, var(--brand) 50%, #9ee525);
   color: var(--brand-ink);
-  font-weight: 900;
-  font-size: 17px;
-  letter-spacing: -0.3px;
-  box-shadow: 0 8px 28px var(--brand-veil);
+  /* The one control set in the display face at full size: this is the call to
+     the floor, and it is lettered like one. */
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 23px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), inset 0 -2px 0 rgba(0, 0, 0, 0.25),
+    0 2px 4px rgba(0, 0, 0, 0.4), 0 10px 32px var(--brand-veil);
 }
 .btn--play::after {
   content: '';
@@ -935,26 +1252,37 @@ img {
 /* =========================================================== selectables == */
 
 /* A tappable card that can be on or off: exercises, modes, filters. */
+/**
+ * A pick — an exercise, a mode, a filter.
+ *
+ * Unselected it is a dark plate. Selected it lights from within and gains a lime
+ * edge, which is the one place outside the primary action where lime appears at
+ * this size: choosing your discipline *is* the action on the Play screen.
+ */
 .pick {
   position: relative;
+  display: block;
   text-align: left;
   padding: var(--s3);
   border-radius: var(--r-card);
-  background: var(--card-2);
+  background: var(--skin-raised);
   color: var(--text);
-  box-shadow: inset 0 0 0 1.5px transparent;
+  box-shadow: var(--plate-edge);
   transition: transform var(--t-fast) var(--ease), background var(--t-fast) var(--ease),
     box-shadow var(--t-fast) var(--ease);
 }
 .pick:hover {
-  background: var(--e3);
+  background: linear-gradient(180deg, var(--e3), var(--card-2));
+  transform: translateY(-2px);
+  box-shadow: var(--plate-edge), var(--plate-drop);
 }
 .pick:active {
   transform: scale(0.975);
 }
 .pick[aria-pressed='true'] {
-  background: var(--brand-wash);
-  box-shadow: inset 0 0 0 1.5px var(--brand);
+  background: linear-gradient(180deg, rgba(182, 255, 59, 0.16), rgba(182, 255, 59, 0.05));
+  box-shadow: inset 0 1px 0 rgba(182, 255, 59, 0.3), inset 0 0 0 1.5px var(--brand),
+    0 6px 22px rgba(182, 255, 59, 0.14);
 }
 .pick__icon {
   display: grid;
@@ -972,15 +1300,88 @@ img {
   color: var(--brand-ink);
 }
 .pick__name {
+  display: block;
+  font-family: var(--display);
   font-weight: 700;
-  font-size: 14.5px;
-  letter-spacing: -0.2px;
+  font-size: 19px;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  line-height: 1.1;
 }
 .pick__meta {
+  display: block;
   font-size: 11.5px;
   font-weight: 600;
   color: var(--text-3);
-  margin-top: 2px;
+  margin-top: 3px;
+}
+
+/* ------------------------------------------------- the exercise card ----- */
+
+/**
+ * An exercise is not a menu item, it is a discipline you are about to be tested
+ * in — so its card is built like a character-select plate: the athlete on a lit
+ * stage up top, the name stencilled underneath.
+ *
+ * The art sits in a recessed well so the figure reads as standing *inside* the
+ * card rather than printed on it, and the well carries the arena floor grid at
+ * low opacity — the same grid as the rail, so the whole product agrees on what
+ * the ground looks like.
+ */
+.pick--exercise {
+  padding: 0;
+  overflow: hidden;
+}
+
+.pick__stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: var(--s4) var(--s2) var(--s2);
+  background: linear-gradient(180deg, var(--page), transparent);
+  box-shadow: inset 0 -1px 0 var(--line-soft);
+  color: var(--text-3);
+  transition: color var(--t-base) var(--ease);
+}
+.pick__stage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: var(--tx-grid);
+  opacity: 0.6;
+  pointer-events: none;
+}
+/* A pool of light under the athlete, in the rank-neutral brand colour. Only on
+   the selected card — an eight-card grid with eight spotlights is a light show,
+   not a selection. */
+.pick__stage::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -34px;
+  width: 130px;
+  height: 68px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse, var(--brand-bloom), transparent 68%);
+  opacity: 0;
+  transition: opacity var(--t-base) var(--ease);
+  pointer-events: none;
+}
+
+.pick:hover .pick__stage {
+  color: var(--text-2);
+}
+.pick[aria-pressed='true'] .pick__stage {
+  color: var(--brand);
+}
+.pick[aria-pressed='true'] .pick__stage::after {
+  opacity: 1;
+}
+
+.pick__label {
+  display: block;
+  padding: var(--s3);
 }
 .pick__check {
   position: absolute;
@@ -996,13 +1397,15 @@ img {
 }
 
 /* Segmented control — 2-4 mutually exclusive options. */
+/* The track is cut into the surface; the selected option is the one key standing
+   proud of it. */
 .seg {
   display: flex;
   gap: 3px;
   padding: 3px;
-  background: var(--surface);
+  background: var(--page);
   border-radius: var(--r-btn);
-  box-shadow: inset 0 0 0 1px var(--line-soft);
+  box-shadow: var(--recess), inset 0 0 0 1px var(--line-soft);
 }
 .seg__opt {
   flex: 1;
@@ -1013,14 +1416,16 @@ img {
   font-size: 13px;
   color: var(--text-3);
   white-space: nowrap;
-  transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+  transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease),
+    box-shadow var(--t-fast) var(--ease);
 }
 .seg__opt:hover {
   color: var(--text-2);
 }
 .seg__opt[aria-pressed='true'] {
-  background: var(--card-2);
+  background: var(--skin-raised);
   color: var(--text);
+  box-shadow: inset 0 1px 0 var(--bevel-strong), 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
 /* Tabs — for switching a page's content, where a segmented control would be
@@ -1067,9 +1472,10 @@ img {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 10px;
+  padding: 5px 11px;
   border-radius: var(--r-full);
-  background: var(--card-2);
+  background: var(--skin-raised);
+  box-shadow: inset 0 1px 0 var(--bevel), inset 0 0 0 1px var(--line-soft);
   color: var(--text-2);
   font-size: 12px;
   font-weight: 700;
@@ -1098,6 +1504,13 @@ img {
 .chip--gold {
   background: rgba(255, 213, 74, 0.12);
   color: var(--gold);
+}
+/* Progression, levels, XP. Warm metal so the screen's lime stays on the one
+   thing that is asking to be pressed. */
+.chip--xp {
+  background: var(--brass-wash);
+  color: var(--brass-lit);
+  box-shadow: inset 0 1px 0 var(--bevel), inset 0 0 0 1px var(--brass-edge);
 }
 .chip__dot {
   width: 6px;
@@ -1149,7 +1562,11 @@ button.listrow:active {
   flex: 1;
   min-width: 0;
 }
+/* `display: block` is load-bearing, not tidiness: this is rendered as a <span>,
+   and `overflow`, `text-overflow` and `white-space` are all ignored on an inline
+   box — so without it a long username overflows its row instead of ellipsising. */
 .listrow__name {
+  display: block;
   font-weight: 700;
   font-size: 14.5px;
   overflow: hidden;
@@ -1328,23 +1745,48 @@ textarea.input {
 
 /* ================================================================= tiers == */
 
+/* A rank name is a title, so it is lettered like one: condensed caps on a tinted
+   plate, the way a division is printed on a fight card. */
 .tier {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 9px;
+  padding: 4px 10px;
   border-radius: var(--r-badge);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
+  font-family: var(--display);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
   text-transform: uppercase;
   white-space: nowrap;
+  box-shadow: inset 0 1px 0 var(--bevel);
 }
 .tier__dot {
   width: 7px;
   height: 7px;
   border-radius: 2px;
   transform: rotate(45deg);
+}
+
+/* ============================================================== crest == */
+
+/* The rank crest positions its glyph over the shield's recessed face. The
+   0.44 offset is the centre of that face, not the centre of the box — a shield
+   tapers, so its optical middle sits above its geometric one. */
+.crest {
+  position: relative;
+  display: inline-grid;
+  flex-shrink: 0;
+  place-items: center;
+}
+.crest__glyph {
+  position: absolute;
+  top: 44%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  pointer-events: none;
 }
 
 /* Rank emblem — a diamond plate, sized in three steps. Not an image, so it
@@ -1373,10 +1815,17 @@ textarea.input {
 
 /* ============================================================ statistics == */
 
+/**
+ * A statistic, treated as a scoreboard cell: the figure recessed into the plate
+ * rather than sitting on it, with a stencilled label beneath. The inset shadow
+ * is what sells it — a number pressed *into* metal reads as a readout, a number
+ * floating on a lighter rectangle reads as a card.
+ */
 .stat {
   padding: var(--s3) var(--s4);
-  background: var(--card-2);
+  background: linear-gradient(180deg, var(--card-shade), var(--card));
   border-radius: var(--r-input);
+  box-shadow: var(--recess), inset 0 0 0 1px var(--line-soft);
 }
 .stat__v {
   font-family: var(--mono);
@@ -1387,12 +1836,16 @@ textarea.input {
   line-height: 1.1;
 }
 .stat__l {
-  font-size: 10.5px;
-  font-weight: 800;
-  letter-spacing: 0.9px;
+  /* Also rendered as a <span> in places, where the margin below would be
+     dropped — vertical margins do nothing on an inline box. */
+  display: block;
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.3px;
   text-transform: uppercase;
   color: var(--text-3);
-  margin-top: 3px;
+  margin-top: 2px;
 }
 
 /* ================================================================ meters == */
@@ -1419,19 +1872,28 @@ textarea.input {
  * highlight, and a soft glow at the leading edge so a gain reads as arriving
  * rather than as a value being redrawn.
  */
+/**
+ * The XP bar, struck in brass rather than lime.
+ *
+ * XP is the one quantity that only ever goes up, and the bar says so: a warm
+ * metal fill with a travelling highlight and a glow at the leading edge, so a
+ * gain reads as *arriving* rather than as a value being redrawn. Brass also
+ * keeps the screen's only lime on the thing you are meant to press — when
+ * progress and action were both lime, neither one was urgent.
+ */
 .xpbar {
-  height: 10px;
-  background: var(--surface);
+  height: 11px;
+  background: var(--page);
   border-radius: var(--r-bar);
   overflow: hidden;
   position: relative;
-  box-shadow: inset 0 0 0 1px var(--line-soft);
+  box-shadow: var(--recess), inset 0 0 0 1px var(--line-soft);
 }
 .xpbar__fill {
   height: 100%;
   border-radius: var(--r-bar);
-  background: linear-gradient(90deg, #86d321, var(--brand));
-  box-shadow: 0 0 12px var(--brand-veil);
+  background: linear-gradient(180deg, var(--brass-lit), var(--brass) 45%, var(--brass-deep));
+  box-shadow: 0 0 14px var(--brass-veil), inset 0 1px 0 rgba(255, 255, 255, 0.35);
   position: relative;
 }
 .xpbar__fill::after {
@@ -1578,12 +2040,18 @@ textarea.input {
   place-items: center;
   flex-shrink: 0;
 }
+/* Both are spans, and a span is inline — so without this the title and body run
+   together on one line ("Challenge not sentThat player is offline") and the
+   body's margin-top silently does nothing, because vertical margins have no
+   effect on inline boxes. Same failure as `.pick__meta` had. */
 .toast__t {
+  display: block;
   font-weight: 800;
   font-size: 14px;
   letter-spacing: -0.2px;
 }
 .toast__b {
+  display: block;
   font-size: 12.5px;
   color: var(--text-2);
   margin-top: 1px;
@@ -1619,6 +2087,118 @@ textarea.input {
 .tip:focus-within .tip__body {
   opacity: 1;
   transform: translateX(-50%) translateY(-2px);
+}
+
+/* ============================================================== bracket == */
+
+/**
+ * A knockout draw, laid out as columns of rounds.
+ *
+ * Horizontal scroll is deliberate. Every printed bracket in every sport reads
+ * left to right through the rounds, and rearranging it into something that fits
+ * a phone without scrolling would make a universally familiar object unfamiliar.
+ * The scroll is contained here so the page body never scrolls sideways.
+ */
+.bracket {
+  display: flex;
+  gap: var(--s6);
+  padding: var(--s4);
+  overflow-x: auto;
+  align-items: stretch;
+}
+
+.bracket__round {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  min-width: 210px;
+  flex: 1;
+}
+
+.bracket__label {
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--text-3);
+  padding-bottom: var(--s2);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+/* Slots spread to fill the column, so a later round's single match sits level
+   with the middle of the two that feed it — which is what makes the columns read
+   as a bracket rather than as four unrelated lists. */
+.bracket__slots {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  gap: var(--s3);
+  flex: 1;
+}
+
+.bracket__match {
+  border-radius: var(--r-input);
+  overflow: hidden;
+  background: var(--skin-raised);
+  box-shadow: var(--plate-edge);
+}
+/* The slot whose match is playable right now is the only one carrying brand
+   colour — on a 32-slot draw, that is the one thing worth finding. */
+.bracket__match--ready {
+  box-shadow: inset 0 0 0 1.5px var(--brand-edge), var(--plate-edge);
+}
+.bracket__match--live {
+  box-shadow: inset 0 0 0 1.5px var(--brand), 0 0 18px var(--brand-veil);
+}
+
+.bracket__player {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: 8px 10px;
+  min-height: 42px;
+  font-size: 13.5px;
+  font-weight: 700;
+}
+.bracket__player + .bracket__player {
+  border-top: 1px solid var(--line-soft);
+}
+.bracket__player--won {
+  background: var(--brand-wash);
+  color: var(--text);
+}
+/* Losers stay legible rather than disappearing: a bracket is a record of who
+   played, not only of who is left. */
+.bracket__player--lost {
+  opacity: 0.45;
+}
+.bracket__player--empty {
+  justify-content: center;
+}
+
+.bracket__seed {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--text-3);
+  min-width: 16px;
+}
+
+.bracket__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bracket__you {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--brand);
 }
 
 /* ================================================================ arena == */

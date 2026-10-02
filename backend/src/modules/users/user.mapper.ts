@@ -18,6 +18,8 @@ export interface UserRow {
   xp: number;
   dayStreak: number;
   createdAt: Date;
+  emailVerifiedAt: Date | null;
+  consentVersion: string | null;
 }
 
 /**
@@ -43,5 +45,9 @@ export function toPublicUser(user: UserRow): PublicUser {
     xp: user.xp,
     dayStreak: user.dayStreak,
     createdAt: user.createdAt.toISOString(),
+    // Projected to a boolean: the client only needs to know whether to show the
+    // confirm-your-address banner, not the moment it happened.
+    emailVerified: user.emailVerifiedAt !== null,
+    consentVersion: user.consentVersion,
   };
 }

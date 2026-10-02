@@ -1,6 +1,7 @@
-import type { AuthResponse, PublicUser } from '@repx/shared';
+import type { AuthResponse, OAuthProvider, PublicUser } from '@repx/shared';
 import { create } from 'zustand';
 import {
+  ApiError,
   get as apiGet,
   loadStoredTokens,
   post,
@@ -15,6 +16,12 @@ interface AuthState {
   ready: boolean;
   register: (input: { email: string; username: string; password: string }) => Promise<void>;
   login: (input: { email: string; password: string }) => Promise<void>;
+  /** Exchanges a verified provider ID token for a RepX session. */
+  signInWithProvider: (
+    provider: OAuthProvider,
+    idToken: string,
+    username?: string,
+  ) => Promise<void>;
   logout: () => void;
   restore: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -39,6 +46,14 @@ export const useAuth = create<AuthState>((set, getState) => ({
     set({ user: res.user });
   },
 
+  async signInWithProvider(provider, idToken, username) {
+    // The ID token is all the server needs — it verifies the signature and reads
+    // the identity out of the verified claims, so nothing here is trusted.
+    const res = await post<AuthResponse>('/auth/oauth', { provider, idToken, username });
+    applySession(res);
+    set({ user: res.user });
+  },
+
   logout() {
     setTokens(null, null);
     disconnectSocket();
@@ -55,8 +70,24 @@ export const useAuth = create<AuthState>((set, getState) => ({
       const user = await apiGet<PublicUser>('/users/me');
       connectSocket(stored.access);
       set({ user, ready: true });
-    } catch {
-      setTokens(null, null);
+    } catch (error) {
+      /**
+       * Only a rejected session clears the session.
+       *
+       * This used to clear it on *any* failure, which meant the server merely
+       * being unreachable — a restart, a dropped wifi, a deploy — deleted the
+       * refresh token out of localStorage and dropped the player on the sign-in
+       * screen. That is the worst possible response to a transient fault: the
+       * credentials were still perfectly valid, and destroying them turned a
+       * ten-second outage into "log in again", on a screen that could not have
+       * logged them in either because the same server was still down.
+       *
+       * A network failure now leaves the stored tokens exactly where they are.
+       * `App` retries the restore as soon as the API answers again, and the
+       * player lands back in the app without typing anything.
+       */
+      const unreachable = error instanceof ApiError && error.status === 0;
+      if (!unreachable) setTokens(null, null);
       set({ user: null, ready: true });
     }
   },

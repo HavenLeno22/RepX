@@ -8,17 +8,21 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type {
+  ChallengeSummary,
   MatchEndedPayload,
   MatchFoundPayload,
   MatchResumedPayload,
   MatchStartedPayload,
   PublicUser,
   QueueStatusPayload,
+  RoomState,
 } from '@repx/shared';
 import { cue } from '../lib/feedback';
 import { getSocket } from '../lib/socket';
 import { useAuth } from '../store/auth';
+import { useLobby } from '../store/lobby';
 import { useMatch } from '../store/match';
+import { useToasts } from '../store/toasts';
 
 export function useMatchSocket(): void {
   const user = useAuth((s) => s.user);
@@ -90,9 +94,91 @@ export function useMatchSocket(): void {
       navigate('/result');
     };
 
+    /* ------------------------------------------ challenges and rooms -- */
+
+    const onChallengeIncoming = (payload: ChallengeSummary) => {
+      // A challenge is an interruption by design — someone is standing in front
+      // of their camera waiting — so it announces itself the way a found match
+      // does rather than sliding in silently.
+      cue('match-found');
+      useLobby.getState().setIncoming(payload);
+    };
+
+    const onChallengeSent = (payload: ChallengeSummary) =>
+      useLobby.getState().setOutgoing(payload);
+
+    const onChallengeClosed = (payload: { challengeId: string }) =>
+      useLobby.getState().clearChallenge(payload.challengeId);
+
+    const onChallengeDeclined = (payload: { challengeId: string }) => {
+      useLobby.getState().clearChallenge(payload.challengeId);
+      useToasts.getState().push({
+        category: 'challenge',
+        title: 'Challenge declined',
+        body: 'They passed on this one.',
+      });
+    };
+
+    const onChallengeUnavailable = (payload: { reason: string }) => {
+      useLobby.getState().setOutgoing(null);
+      useToasts.getState().push({
+        category: 'challenge',
+        title: 'Challenge not sent',
+        body: payload.reason,
+      });
+    };
+
+    const onRoomState = (payload: RoomState) => {
+      useLobby.getState().setRoom(payload);
+      useLobby.getState().setError(null);
+    };
+
+    const onRoomClosed = () => useLobby.getState().setRoom(null);
+    const onRoomLeft = () => useLobby.getState().setRoom(null);
+    const onRoomError = (payload: { reason: string }) =>
+      useLobby.getState().setError(payload.reason);
+
+    const onTournamentError = (payload: { reason: string }) =>
+      useToasts.getState().push({
+        category: 'tournament',
+        title: 'Cannot start that match',
+        body: payload.reason,
+      });
+
+    const onTournamentOpponentWaiting = () =>
+      useToasts.getState().push({
+        category: 'tournament',
+        title: 'Your opponent is ready',
+        body: 'Open your bracket to start the match.',
+        href: '/tournaments',
+      });
+
+    // The counterpart to the above. Without it, someone who was told their
+    // opponent was ready keeps waiting at a slot the opponent has since left.
+    const onTournamentOpponentLeft = () =>
+      useToasts.getState().push({
+        category: 'tournament',
+        title: 'Your opponent stepped away',
+        body: 'The slot is still yours — try again when they are back.',
+        href: '/tournaments',
+      });
+
     socket.on('matchmaking:queued', onQueued);
     socket.on('matchmaking:left', onLeft);
     socket.on('matchmaking:found', onFound);
+    socket.on('challenge:incoming', onChallengeIncoming);
+    socket.on('challenge:sent', onChallengeSent);
+    socket.on('challenge:cancelled', onChallengeClosed);
+    socket.on('challenge:expired', onChallengeClosed);
+    socket.on('challenge:declined', onChallengeDeclined);
+    socket.on('challenge:unavailable', onChallengeUnavailable);
+    socket.on('room:state', onRoomState);
+    socket.on('room:closed', onRoomClosed);
+    socket.on('room:left', onRoomLeft);
+    socket.on('room:error', onRoomError);
+    socket.on('tournament:error', onTournamentError);
+    socket.on('tournament:opponentWaiting', onTournamentOpponentWaiting);
+    socket.on('tournament:opponentLeft', onTournamentOpponentLeft);
     socket.on('match:started', onStarted);
     socket.on('match:resumed', onResumed);
     socket.on('rep:counted', onRep);
@@ -106,6 +192,19 @@ export function useMatchSocket(): void {
       socket.off('matchmaking:queued', onQueued);
       socket.off('matchmaking:left', onLeft);
       socket.off('matchmaking:found', onFound);
+      socket.off('challenge:incoming', onChallengeIncoming);
+      socket.off('challenge:sent', onChallengeSent);
+      socket.off('challenge:cancelled', onChallengeClosed);
+      socket.off('challenge:expired', onChallengeClosed);
+      socket.off('challenge:declined', onChallengeDeclined);
+      socket.off('challenge:unavailable', onChallengeUnavailable);
+      socket.off('room:state', onRoomState);
+      socket.off('room:closed', onRoomClosed);
+      socket.off('room:left', onRoomLeft);
+      socket.off('room:error', onRoomError);
+      socket.off('tournament:error', onTournamentError);
+      socket.off('tournament:opponentWaiting', onTournamentOpponentWaiting);
+      socket.off('tournament:opponentLeft', onTournamentOpponentLeft);
       socket.off('match:started', onStarted);
       socket.off('match:resumed', onResumed);
       socket.off('rep:counted', onRep);
