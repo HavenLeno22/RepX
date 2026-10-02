@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   RARITY_COLORS,
@@ -418,6 +418,8 @@ export function Profile() {
  * direction, and drawing it left to right is the cheapest way to say so.
  */
 function RatingChart({ points, color }: { points: number[]; color: string }) {
+  // Scoped so a second chart on the same page cannot capture this one's fill.
+  const uid = useId().replace(/:/g, '');
   const w = 100;
   const h = 40;
   const min = Math.min(...points);
@@ -444,19 +446,42 @@ function RatingChart({ points, color }: { points: number[]; color: string }) {
         aria-label={`Rating from ${points[0]} to ${last}`}
       >
         <defs>
-          <linearGradient id="ratingFill" x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id={`ratingFill-${uid}`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={color} stopOpacity={0.28} />
             <stop offset="100%" stopColor={color} stopOpacity={0} />
           </linearGradient>
+          {/*
+            The line draws itself by having a window widen across it, rather than
+            by animating `pathLength`.
+
+            `pathLength` is the usual way to do this and it is wrong here: Framer
+            implements it as a stroke-dash pattern measured in user units, while
+            `vectorEffect="non-scaling-stroke"` asks for a stroke measured in
+            screen pixels, and `preserveAspectRatio="none"` stretches the two
+            spaces apart by a different factor on each axis. The three cannot all
+            be satisfied, and the visible result is a finished line left with
+            gaps chewed out of it. A clip is measured in one space only, so it
+            cannot disagree with itself.
+          */}
+          <clipPath id={`ratingReveal-${uid}`}>
+            <motion.rect
+              x={0}
+              y={-8}
+              height={h + 16}
+              initial={{ width: 0 }}
+              animate={{ width: w }}
+              transition={{ duration: 1.1, ease: EASE.standard }}
+            />
+          </clipPath>
         </defs>
         <motion.path
           d={area}
-          fill="url(#ratingFill)"
+          fill={`url(#ratingFill-${uid})`}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.3 }}
         />
-        <motion.path
+        <path
           d={line}
           fill="none"
           stroke={color}
@@ -464,9 +489,7 @@ function RatingChart({ points, color }: { points: number[]; color: string }) {
           strokeLinecap="round"
           strokeLinejoin="round"
           vectorEffect="non-scaling-stroke"
-          initial={{ pathLength: 0 }}
-          animate={{ pathLength: 1 }}
-          transition={{ duration: 1.1, ease: EASE.standard }}
+          clipPath={`url(#ratingReveal-${uid})`}
         />
       </svg>
 

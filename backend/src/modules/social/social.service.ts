@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { rankForRating } from '@repx/shared';
+import { isPostgres } from '../../config/env';
 import { PrismaService } from '../../prisma/prisma.service';
 import { toPublicUser } from '../users/user.mapper';
 import { PresenceService, type PresenceState } from './presence.service';
@@ -211,7 +212,23 @@ export class SocialService {
         matchesPlayed: { gt: 0 },
         ...(ids ? { id: { in: ids } } : {}),
         ...(country ? { country } : {}),
-        ...(params.search ? { username: { contains: params.search } } : {}),
+        /**
+         * Case-insensitive on both engines, which takes a conditional because
+         * they disagree by default: SQLite's LIKE ignores ASCII case, and
+         * PostgreSQL's does not. Left alone, searching "Mike" found mike in
+         * development and nobody at all in production — and this search is how
+         * one player finds another to challenge, so failing it quietly removes
+         * a whole route into a match. `mode` cannot simply always be sent:
+         * SQLite rejects it outright.
+         */
+        ...(params.search
+          ? {
+              username: {
+                contains: params.search,
+                ...(isPostgres() ? { mode: 'insensitive' as const } : {}),
+              },
+            }
+          : {}),
       },
       orderBy: { rating: 'desc' },
       take: limit,

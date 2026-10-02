@@ -130,6 +130,32 @@ const NOTIFICATIONS = [
 ];
 
 async function main() {
+  /**
+   * Never seed a production database.
+   *
+   * `npm run db:setup` runs this, and `db:setup` is the command anybody reaches
+   * for when a fresh environment has no tables. Run once against production it
+   * creates five working accounts whose shared password is printed in the
+   * README, on the seed's own final line, and in this file — five back doors,
+   * installed by the setup instructions.
+   *
+   * It refuses rather than warns because a warning scrolls past in a deploy log.
+   * SEED_DEMO_DATA=1 is the deliberate override for a staging environment that
+   * genuinely wants a populated leaderboard.
+   */
+  if (process.env.NODE_ENV === 'production' && process.env.SEED_DEMO_DATA !== '1') {
+    console.error(
+      'Refusing to seed demo accounts with NODE_ENV=production.\n' +
+        `These accounts share a well-known password ("${DEMO_PASSWORD}") and would be\n` +
+        'usable by anyone who has read this repository.\n\n' +
+        'Production needs migrations, not seed data:\n' +
+        '  npm run db:deploy -w @repx/backend\n\n' +
+        'If this really is a staging environment that wants demo players, set\n' +
+        'SEED_DEMO_DATA=1 to override.',
+    );
+    process.exit(1);
+  }
+
   const passwordHash = await hashPassword(DEMO_PASSWORD);
 
   for (const user of DEMO_USERS) {

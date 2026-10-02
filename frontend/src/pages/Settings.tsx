@@ -1,10 +1,10 @@
 import { useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { updateProfileSchema, type PublicUser } from '@repx/shared';
 import { Avatar } from '../components/Avatar';
 import { Icon, type IconName } from '../components/Icon';
 import { Panel } from '../components/ui';
-import { ApiError, api } from '../lib/api';
+import { ApiError, api, post } from '../lib/api';
 import { cue } from '../lib/feedback';
 import { useAuth } from '../store/auth';
 import { usePrefs, type MotionPref } from '../store/prefs';
@@ -306,8 +306,126 @@ export function Settings() {
             Sign out
           </button>
         </Panel>
+
+        <Panel title="Your data">
+          <div className="col gap-sm" style={{ marginBottom: 'var(--s4)' }}>
+            <Link to="/privacy" className="listrow" style={{ padding: 0, minHeight: 40 }}>
+              <span className="listrow__main">
+                <span className="listrow__name">Privacy terms</span>
+                <span className="listrow__sub">What the camera does, and what we keep</span>
+              </span>
+              <Icon name="chevron-right" size={16} />
+            </Link>
+            <Link to="/terms" className="listrow" style={{ padding: 0, minHeight: 40 }}>
+              <span className="listrow__main">
+                <span className="listrow__name">Terms</span>
+                <span className="listrow__sub">Fair play, conduct, and training safely</span>
+              </span>
+              <Icon name="chevron-right" size={16} />
+            </Link>
+          </div>
+          <DeleteAccount username={user.username} />
+        </Panel>
       </div>
     </>
+  );
+}
+
+/* -------------------------------------------------------------- erasure -- */
+
+/**
+ * Account deletion.
+ *
+ * Two-step, and the second step is typing your own username. This is the one
+ * irreversible action in the product — it takes every match, rating and trophy
+ * with it — and a destructive control that fires on a single click is a
+ * destructive control that fires by accident.
+ */
+function DeleteAccount({ username }: { username: string }) {
+  const [open, setOpen] = useState(false);
+  const [confirm, setConfirm] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const logout = useAuth((s) => s.logout);
+  const navigate = useNavigate();
+
+  const matches = confirm.trim().toLowerCase() === username.toLowerCase();
+
+  async function submit() {
+    setBusy(true);
+    setError(null);
+    try {
+      await post('/users/me/delete', { confirmUsername: confirm.trim() });
+      logout();
+      navigate('/login', { replace: true });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not delete the account. Try again.');
+      setBusy(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button className="btn btn--danger btn--block" onClick={() => setOpen(true)}>
+        <Icon name="skull" size={17} />
+        Delete account
+      </button>
+    );
+  }
+
+  return (
+    <div className="col gap-sm">
+      <div className="alert alert--error" style={{ marginBottom: 0 }}>
+        <Icon name="info" size={16} />
+        <span>
+          This removes your account, every match you have played, your rating, your trophies and
+          your friendships. It is immediate and cannot be undone.
+        </span>
+      </div>
+
+      {error && (
+        <div className="alert alert--error" style={{ marginBottom: 0 }}>
+          <Icon name="info" size={16} />
+          {error}
+        </div>
+      )}
+
+      <div className="field" style={{ marginBottom: 0 }}>
+        <label className="field__label" htmlFor="confirm-delete">
+          Type <strong>{username}</strong> to confirm
+        </label>
+        <input
+          id="confirm-delete"
+          className="input"
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          autoComplete="off"
+          autoFocus
+        />
+      </div>
+
+      <div className="row gap-sm">
+        <button
+          className="btn btn--ghost"
+          style={{ flex: 1 }}
+          onClick={() => {
+            setOpen(false);
+            setConfirm('');
+            setError(null);
+          }}
+        >
+          Keep my account
+        </button>
+        <button
+          className="btn btn--danger"
+          style={{ flex: 1 }}
+          disabled={!matches || busy}
+          onClick={() => void submit()}
+        >
+          {busy ? <span className="spinner" /> : 'Delete for good'}
+        </button>
+      </div>
+    </div>
   );
 }
 

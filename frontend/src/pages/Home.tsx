@@ -94,7 +94,7 @@ export function Home() {
             <Panel title="Progress">
               <div className="row between" style={{ marginBottom: 'var(--s2)' }}>
                 <span className="row" style={{ gap: 'var(--s2)' }}>
-                  <span className="chip chip--brand">
+                  <span className="chip chip--xp">
                     <Icon name="chevron-up" size={13} />
                     Level {summary?.level.level ?? 1}
                   </span>
@@ -321,6 +321,20 @@ function Hero({
         borderColor: `${rankColor}2e`,
       }}
     >
+      {/* The arena floor, running under the hero only. Home is the one screen
+          that should feel like standing in the venue rather than reading about
+          it, and the grid is what gives the panel a ground plane. */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: 'var(--tx-grid)',
+          opacity: 0.9,
+          pointerEvents: 'none',
+        }}
+      />
+
       {/* A single soft bloom in the rank colour. Not decoration for its own sake:
           it is what makes the panel read as *your* rank rather than a container
           that happens to mention it. */}
@@ -338,6 +352,21 @@ function Hero({
         }}
       />
 
+      {/* The stripe every start gate and piece of gym equipment carries, run down
+          the leading edge in the player's own rank colour. */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: 4,
+          background: `linear-gradient(180deg, ${rankColor}, transparent)`,
+          pointerEvents: 'none',
+        }}
+      />
+
       <div className="panel__body" style={{ position: 'relative', padding: 'var(--s6)' }}>
         <div className="row between wrap-row" style={{ gap: 'var(--s5)', alignItems: 'flex-start' }}>
           <div style={{ minWidth: 240, flex: 1 }}>
@@ -345,7 +374,10 @@ function Hero({
               <Emblem rating={rating} size="lg" />
               <div>
                 <div className="t-caption mute">Welcome back</div>
-                <div className="t-h2" style={{ marginTop: 2 }}>
+                {/* The player's name is the headline of their own card, so it is
+                    lettered like a fighter's on a bill rather than set as a
+                    subheading. */}
+                <div className="t-h1" style={{ marginTop: 1 }}>
                   {username}
                 </div>
                 <div className="row" style={{ gap: 'var(--s2)', marginTop: 6 }}>
@@ -461,7 +493,13 @@ function Missions({ summary }: { summary: ReturnType<typeof useSummary.getState>
               gap: 'var(--s3)',
               padding: 'var(--s3)',
               borderRadius: 'var(--r-input)',
-              background: mission.complete ? 'var(--brand-wash)' : 'var(--card-2)',
+              // A finished mission is progress, not an action, so it is struck in
+              // brass. Lime on this row would compete with the Play button for
+              // the same glance and lose the product its only urgent colour.
+              background: mission.complete ? 'var(--brass-wash)' : 'var(--card-2)',
+              boxShadow: mission.complete
+                ? 'inset 0 0 0 1px var(--brass-edge)'
+                : 'inset 0 1px 0 var(--bevel)',
             }}
           >
             <span
@@ -472,8 +510,8 @@ function Missions({ summary }: { summary: ReturnType<typeof useSummary.getState>
                 display: 'grid',
                 placeItems: 'center',
                 flexShrink: 0,
-                background: mission.complete ? 'var(--brand)' : 'var(--card)',
-                color: mission.complete ? 'var(--brand-ink)' : 'var(--text-3)',
+                background: mission.complete ? 'var(--brass)' : 'var(--card)',
+                color: mission.complete ? '#2a1c05' : 'var(--text-3)',
               }}
             >
               <Icon name={mission.complete ? 'check' : (mission.icon as never)} size={17} />
@@ -487,7 +525,7 @@ function Missions({ summary }: { summary: ReturnType<typeof useSummary.getState>
                   style={{
                     fontSize: 12,
                     fontWeight: 800,
-                    color: mission.complete ? 'var(--brand)' : 'var(--text-3)',
+                    color: mission.complete ? 'var(--brass-lit)' : 'var(--text-3)',
                   }}
                 >
                   +{mission.xp}
@@ -501,7 +539,7 @@ function Missions({ summary }: { summary: ReturnType<typeof useSummary.getState>
                   <Meter
                     progress={mission.progress}
                     thin
-                    color={mission.complete ? 'var(--brand)' : 'var(--text-3)'}
+                    color={mission.complete ? 'var(--brass)' : 'var(--text-3)'}
                   />
                 </span>
                 <span className="mono mute" style={{ fontSize: 11.5, fontWeight: 700 }}>

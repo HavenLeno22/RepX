@@ -3,16 +3,22 @@
   "version": "0.1.0",
   "private": true,
   "description": "RepX API, real-time match, and AI rep-verification services — NestJS + TypeScript.",
+  "license": "MIT",
   "scripts": {
     "dev": "nest start --watch",
     "start": "node dist/main.js",
     "build": "nest build",
     "typecheck": "tsc --noEmit",
-    "db:setup": "prisma generate && prisma db push --skip-generate && node prisma/seed.js",
-    "db:push": "prisma db push",
-    "db:studio": "prisma studio",
+    "db:setup": "npm run db:provider && prisma generate && prisma db push --skip-generate && node prisma/seed.js",
+    "db:push": "npm run db:provider && prisma db push",
+    "db:studio": "npm run db:provider && prisma studio",
     "test": "echo \"No backend unit tests yet — see test:e2e\" && exit 0",
-    "test:e2e": "node test/match-e2e.mjs"
+    "test:e2e": "node test/match-e2e.mjs",
+    "db:provider": "node scripts/set-provider.mjs",
+    "db:generate": "npm run db:provider && prisma generate",
+    "db:migrate": "npm run db:provider && prisma migrate dev",
+    "db:deploy": "npm run db:provider && prisma migrate deploy",
+    "test:auth": "node test/auth-e2e.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.6",
@@ -21,9 +27,13 @@
     "@nestjs/jwt": "^10.2.0",
     "@nestjs/platform-express": "^10.4.6",
     "@nestjs/platform-socket.io": "^10.4.6",
+    "@nestjs/throttler": "^6.5.0",
     "@nestjs/websockets": "^10.4.6",
     "@prisma/client": "^5.22.0",
     "@repx/shared": "*",
+    "helmet": "^8.3.0",
+    "jose": "^6.2.7",
+    "nodemailer": "^9.0.3",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "socket.io": "^4.8.1",
@@ -34,6 +44,7 @@
     "@nestjs/schematics": "^10.2.3",
     "@types/express": "^5.0.0",
     "@types/node": "^22.9.0",
+    "@types/nodemailer": "^8.0.1",
     "prisma": "^5.22.0",
     "typescript": "^5.6.3"
   }

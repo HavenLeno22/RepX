@@ -1,8 +1,10 @@
 import { motion } from 'framer-motion';
 import { useEffect, useState, type FormEvent } from 'react';
-import { loginSchema, registerSchema, type Season } from '@repx/shared';
+import { Link } from 'react-router-dom';
+import { loginSchema, registerSchema, type OAuthProvider, type Season } from '@repx/shared';
 import { Icon, type IconName } from '../components/Icon';
-import { ApiError, get } from '../lib/api';
+import { SocialSignIn } from '../components/SocialSignIn';
+import { describeError, get } from '../lib/api';
 import { cue } from '../lib/feedback';
 import { EASE } from '../lib/motion';
 import { useAuth } from '../store/auth';
@@ -26,7 +28,7 @@ export function Login() {
   const [season, setSeason] = useState<Season | null>(null);
   const [pulse, setPulse] = useState<{ online: number } | null>(null);
 
-  const { login, register } = useAuth();
+  const { login, register, signInWithProvider } = useAuth();
 
   // Both are public endpoints. Showing a live season and a live player count on
   // the sign-in screen is the cheapest honest proof that this is a running
@@ -56,7 +58,27 @@ export function Login() {
       if (mode === 'login') await login({ email, password });
       else await register({ email, username, password });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Something went wrong. Try again.');
+      setError(describeError(err, 'Something went wrong. Try again.'));
+      cue('error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /**
+   * Completes a provider sign-in.
+   *
+   * The username typed into the form is passed along only as a *suggestion* for
+   * a brand-new account — the server ignores it when the identity already
+   * resolves to someone, and allocates a free name of its own if it collides.
+   */
+  async function social(provider: OAuthProvider, idToken: string) {
+    setError(null);
+    setBusy(true);
+    try {
+      await signInWithProvider(provider, idToken, mode === 'register' ? username : undefined);
+    } catch (err) {
+      setError(describeError(err, 'That sign-in did not complete.'));
       cue('error');
     } finally {
       setBusy(false);
@@ -206,13 +228,72 @@ export function Login() {
               )}
             </button>
 
+            {/* Only on the sign-in tab. Somebody creating an account has no
+                password to have forgotten. */}
+            {mode === 'login' && (
+              <div className="row" style={{ justifyContent: 'center', marginTop: 'var(--s3)' }}>
+                <Link to="/forgot" className="t-sm dim">
+                  Forgotten your password?
+                </Link>
+              </div>
+            )}
+
+            <div style={{ marginTop: 'var(--s5)' }}>
+              <SocialSignIn onToken={(provider, idToken) => void social(provider, idToken)} disabled={busy} />
+            </div>
+
             <div className="divider" />
 
-            <div className="row" style={{ justifyContent: 'center', gap: 'var(--s2)', flexWrap: 'wrap' }}>
-              <span className="t-caption mute">Try it</span>
-              <span className="chip">rookie@repx.dev</span>
-              <span className="chip">repx1234</span>
-            </div>
+            {/*
+              Agreement is presented here, at the point of creating an account,
+              rather than only behind a settings menu. Both Google's and Apple's
+              sign-in review check for it, and the camera consent gate later on
+              is about the camera specifically — it is not where someone should
+              be discovering the terms for the first time.
+            */}
+            {/*
+              t-sm rather than t-caption: caption is uppercased, and a legal
+              sentence set in all-caps at 11px is the least readable thing on the
+              screen — which is a bad look on the one line whose whole job is to
+              be read. The links carry an explicit colour and underline because
+              inheriting `mute` made them indistinguishable from the sentence
+              around them, so nobody could tell there was anything to click.
+            */}
+            <p className="t-sm mute" style={{ textAlign: 'center', lineHeight: 1.5 }}>
+              By continuing you agree to the{' '}
+              <Link to="/terms" style={{ color: 'var(--text)', textDecoration: 'underline' }}>
+                Terms
+              </Link>{' '}
+              and the{' '}
+              <Link to="/privacy" style={{ color: 'var(--text)', textDecoration: 'underline' }}>
+                Privacy terms
+              </Link>
+              .
+            </p>
+
+            {/*
+              Development only, and it has to stay that way. These are the seeded
+              demo accounts from prisma/seed.js, and their password is printed in
+              the README — publishing a working credential on the sign-in screen
+              of a deployed app hands anybody an account on it. `import.meta.env.DEV`
+              is compiled out of the production bundle entirely, so the strings
+              are not merely hidden, they are absent from the shipped JavaScript.
+            */}
+            {import.meta.env.DEV && (
+              <div
+                className="row"
+                style={{
+                  justifyContent: 'center',
+                  gap: 'var(--s2)',
+                  flexWrap: 'wrap',
+                  marginTop: 'var(--s4)',
+                }}
+              >
+                <span className="t-caption mute">Try it</span>
+                <span className="chip">rookie@repx.dev</span>
+                <span className="chip">repx1234</span>
+              </div>
+            )}
           </form>
         </motion.div>
       </div>

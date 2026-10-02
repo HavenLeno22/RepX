@@ -1,19 +1,23 @@
 import { motion } from 'framer-motion';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   MATCH_DURATION_SECONDS,
   previewMatchRatings,
   rankForRating,
+  rankProgress,
   type ExerciseInfo,
   type MatchMode,
   type QueueStatusPayload,
 } from '@repx/shared';
 import { Avatar } from '../components/Avatar';
 import { CameraPreview } from '../components/CameraPreview';
+import { ExerciseArt } from '../components/ExerciseArt';
 import { Icon, exerciseIcon, type IconName } from '../components/Icon';
+import { ChallengeDialog, RoomDialog } from '../components/play-dialogs';
 import { CountUp } from '../components/motion';
-import { Emblem, Meter } from '../components/ui';
-import { get } from '../lib/api';
+import { Emblem, ErrorState, Meter } from '../components/ui';
+import { describeError, get } from '../lib/api';
 import { getStream, prepareArena, releaseCamera, useArena, warmModel } from '../lib/arena';
 import { cue } from '../lib/feedback';
 import { EASE } from '../lib/motion';
@@ -50,6 +54,8 @@ export function Play() {
   const [mode, setMode] = useState<MatchMode>('ranked');
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  /** Which of the two non-queue routes into a match is open, if either. */
+  const [panel, setPanel] = useState<'challenge' | 'room' | null>(null);
 
   const phase = useMatch((s) => s.phase);
   const queue = useMatch((s) => s.queue);
@@ -57,21 +63,33 @@ export function Play() {
   const arenaStatus = useArena((s) => s.status);
   const arenaError = useArena((s) => s.error);
 
+  /**
+   * The exercise list is the screen — without it there is nothing to pick and
+   * nothing to queue for — so its failure is recoverable in place rather than
+   * needing a reload. The message comes from `describeError`: this used to
+   * report every failure as a connection problem, including the 429 that a
+   * shared development IP hits constantly, which pointed diagnosis at the
+   * network for a fault that was entirely server-side.
+   */
+  const loadExercises = useCallback(async () => {
+    setError(null);
+    try {
+      const list = await get<ExerciseInfo[]>('/exercises');
+      setExercises(list);
+      setSelected((current) => current ?? list[0]?.slug ?? null);
+    } catch (cause) {
+      setExercises([]);
+      setError(describeError(cause, 'Could not load the exercises.'));
+    }
+  }, []);
+
   useEffect(() => {
-    void get<ExerciseInfo[]>('/exercises')
-      .then((list) => {
-        setExercises(list);
-        setSelected((current) => current ?? list[0]?.slug ?? null);
-      })
-      .catch(() => {
-        setExercises([]);
-        setError('Could not reach the server. Check your connection and try again.');
-      });
+    void loadExercises();
 
     // Pull the pose model down while the player browses. No permission prompt,
     // no camera light — just the slow part of the arena, done in advance.
     void warmModel().catch(() => undefined);
-  }, []);
+  }, [loadExercises]);
 
   const searching = phase === 'queued';
   const active = exercises?.find((e) => e.slug === selected);
@@ -126,7 +144,10 @@ export function Play() {
         </span>
       </div>
 
-      {error && (
+      {/* Only errors the panels below cannot show themselves — a camera that
+          would not start, mostly. A failed exercise load renders inside the
+          exercise panel, with the retry attached to the thing that failed. */}
+      {error && exercises !== null && exercises.length > 0 && (
         <div className="alert alert--error">
           <Icon name="info" size={17} style={{ marginTop: 1 }} />
           <span>{error}</span>
@@ -147,6 +168,13 @@ export function Play() {
                     <div key={i} className="skeleton" style={{ height: 104 }} />
                   ))}
                 </div>
+              ) : exercises.length === 0 ? (
+                /* A failed load left an empty panel under a heading promising a
+                   choice, with no way to ask again short of reloading the page. */
+                <ErrorState
+                  message={error ?? 'Could not load the exercises.'}
+                  onRetry={() => void loadExercises()}
+                />
               ) : (
                 <div className="grid grid--picks">
                   {exercises.map((exercise, i) => {
@@ -157,7 +185,7 @@ export function Play() {
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: Math.min(i * 0.03, 0.2), duration: 0.24, ease: EASE.standard }}
-                        className="pick"
+                        className="pick pick--exercise"
                         aria-pressed={isSelected}
                         onClick={() => {
                           setSelected(exercise.slug);
@@ -169,12 +197,16 @@ export function Play() {
                             <Icon name="check" size={11} strokeWidth={3} />
                           </span>
                         )}
-                        <span className="pick__icon">
-                          <Icon name={exerciseIcon(exercise.slug)} size={19} />
+                        {/* The athlete, mid-movement. Tints from the card's own
+                            state, so the selected discipline lights up. */}
+                        <span className="pick__stage">
+                          <ExerciseArt slug={exercise.slug} size={104} />
                         </span>
-                        <span className="pick__name">{exercise.displayName}</span>
-                        <span className="pick__meta">
-                          {exercise.scoring === 'hold' ? '1 pt / second' : 'Most reps wins'}
+                        <span className="pick__label">
+                          <span className="pick__name">{exercise.displayName}</span>
+                          <span className="pick__meta">
+                            {exercise.scoring === 'hold' ? '1 pt / second' : 'Most reps wins'}
+                          </span>
                         </span>
                       </motion.button>
                     );
@@ -204,10 +236,27 @@ export function Play() {
               <span className="panel__title">Other ways to play</span>
             </header>
             <div className="panel__body grid grid--picks">
-              <Upcoming icon="users" name="Challenge a friend" meta="Queue into someone by name" />
-              <Upcoming icon="lock" name="Private room" meta="Invite-only, no rating" />
-              <Upcoming icon="medal" name="Tournaments" meta="Bracketed, seasonal" />
-              <Upcoming icon="brain" name="AI Coach" meta="Form review after a set" />
+              <button className="pick" onClick={() => setPanel('challenge')}>
+                <span className="pick__icon">
+                  <Icon name="users" size={19} />
+                </span>
+                <span className="pick__name">Challenge a player</span>
+                <span className="pick__meta">Pick your opponent by name</span>
+              </button>
+              <button className="pick" onClick={() => setPanel('room')}>
+                <span className="pick__icon">
+                  <Icon name="lock" size={19} />
+                </span>
+                <span className="pick__name">Private room</span>
+                <span className="pick__meta">Share a code, no rating</span>
+              </button>
+              <Link to="/tournaments" className="pick">
+                <span className="pick__icon">
+                  <Icon name="medal" size={19} />
+                </span>
+                <span className="pick__name">Tournaments</span>
+                <span className="pick__meta">Knockout brackets</span>
+              </Link>
             </div>
           </section>
         </div>
@@ -271,11 +320,16 @@ export function Play() {
                           {user.rating}
                         </span>
                       </div>
+                      {/*
+                        `rankProgress` rather than a local calculation: the tiers
+                        are not all the same width (Bronze spans 0–800, the rest
+                        400), so dividing by a hard-coded 400 filled the Bronze
+                        meter at half the rating it should have and overflowed it
+                        entirely from 1200. It also gets Grandmaster right, which
+                        has no tier above it to measure against.
+                      */}
                       <Meter
-                        progress={
-                          (user.rating - rankForRating(user.rating).min) /
-                          Math.max(1, 400)
-                        }
+                        progress={rankProgress(user.rating)}
                         thin
                         color={rankForRating(user.rating).color}
                       />
@@ -305,22 +359,16 @@ export function Play() {
           </button>
         </div>
       </div>
-    </>
-  );
-}
 
-function Upcoming({ icon, name, meta }: { icon: IconName; name: string; meta: string }) {
-  return (
-    <div className="pick" style={{ opacity: 0.55, cursor: 'default' }} aria-disabled>
-      <span className="pick__icon">
-        <Icon name={icon} size={19} />
-      </span>
-      <span className="pick__name">{name}</span>
-      <span className="pick__meta">{meta}</span>
-      <span className="chip" style={{ marginTop: 8, padding: '2px 7px', fontSize: 10 }}>
-        Soon
-      </span>
-    </div>
+      {/* Both dialogs inherit the exercise already chosen above, so picking an
+          opponent never means picking the exercise a second time. */}
+      {panel === 'challenge' && selected && (
+        <ChallengeDialog exerciseSlug={selected} mode={mode} onClose={() => setPanel(null)} />
+      )}
+      {panel === 'room' && selected && (
+        <RoomDialog exerciseSlug={selected} onClose={() => setPanel(null)} />
+      )}
+    </>
   );
 }
 

@@ -16,4 +16,5 @@ export * from './exercise-engine/types';
 export * from './exercise-engine/geometry';
 export * from './exercise-engine/rep-session';
 export * from './exercise-engine/registry';
+export * from './tournament/bracket';
 export * from './schemas';

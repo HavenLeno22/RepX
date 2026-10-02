@@ -1,0 +1,23 @@
+{
+  "name": "RepX — Ranked Fitness",
+  "short_name": "RepX",
+  "description": "Competitive, AI-verified bodyweight exercise matches. 60-second 1v1 rounds with a chess-style rating.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#07080C",
+  "theme_color": "#07080C",
+  "categories": ["fitness", "games", "sports"],
+  "icons": [
+    { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Play ranked", "short_name": "Play", "url": "/play" },
+    { "name": "Leaderboard", "short_name": "Ranks", "url": "/leaderboard" }
+  ]
+}

@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import type { Request } from 'express';
+import { loadEnv } from '../../config/env';
 
 export interface AuthedRequest extends Request {
   userId: string;
@@ -31,7 +32,7 @@ export class JwtAuthGuard implements CanActivate {
 
     try {
       const payload = await this.jwt.verifyAsync<{ sub: string }>(header.slice(7), {
-        secret: process.env.JWT_ACCESS_SECRET ?? 'dev-access-secret-change-me',
+        secret: loadEnv().JWT_ACCESS_SECRET,
       });
       request.userId = payload.sub;
       return true;
@@ -61,7 +62,7 @@ export class OptionalJwtGuard implements CanActivate {
 
     try {
       const payload = await this.jwt.verifyAsync<{ sub: string }>(header.slice(7), {
-        secret: process.env.JWT_ACCESS_SECRET ?? 'dev-access-secret-change-me',
+        secret: loadEnv().JWT_ACCESS_SECRET,
       });
       request.userId = payload.sub;
     } catch {

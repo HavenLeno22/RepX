@@ -10,6 +10,22 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// One schema serves SQLite locally and PostgreSQL in every deployed
+// environment.
+//
+//   local        DATABASE_PROVIDER=sqlite     DATABASE_URL="file:./dev.db"
+//   deployed     DATABASE_PROVIDER=postgresql DATABASE_URL="postgresql://…"
+//
+// The provider line below is stamped from DATABASE_PROVIDER by
+// `scripts/set-provider.mjs`, which every db:* script runs first. Prisma
+// forbids env() in this position specifically — the provider decides which
+// query engine is compiled in, so it has to be known statically — and the two
+// alternatives are both worse: a second schema file duplicates 400 lines that
+// then drift, and hand-editing before each deploy is a step someone forgets
+// exactly once.
+//
+// The schema itself stays portable — no native enums, no Postgres-only column
+// types — which is what lets one file do both. See docs/DEPLOYMENT.md.
 datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
@@ -61,19 +77,37 @@ model User {
   // active | suspended | banned
   status String @default("active")
 
+  // Null until the address is confirmed. Nullable timestamp rather than a
+  // boolean because "when" answers questions a "whether" cannot — how long an
+  // unverified account sat before confirming, and which accounts predate the
+  // verification requirement.
+  //
+  // Accounts created through Google or Apple are verified on arrival: the
+  // provider has already proven the address, and asking a user to confirm an
+  // address they just proved is friction for no security.
+  emailVerifiedAt DateTime?
+
+  // Camera and pose processing consent, captured before the first match and
+  // recorded with the policy version in force at the time — consent to an
+  // earlier policy is not consent to a later one. See docs/SECURITY.md.
+  consentedAt      DateTime?
+  consentVersion   String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  identities    AuthIdentity[]
-  participants  MatchParticipant[]
-  eloHistory    EloHistory[]
-  cheatFlags    CheatFlag[]
-  refreshTokens RefreshToken[]
-  achievements  AchievementUnlock[]
-  missions      MissionProgress[]
-  notifications Notification[]
-  friendsSent     Friendship[] @relation("FriendRequester")
-  friendsReceived Friendship[] @relation("FriendAddressee")
+  identities        AuthIdentity[]
+  verificationTokens VerificationToken[]
+  participants      MatchParticipant[]
+  eloHistory        EloHistory[]
+  cheatFlags        CheatFlag[]
+  refreshTokens     RefreshToken[]
+  achievements      AchievementUnlock[]
+  missions          MissionProgress[]
+  notifications     Notification[]
+  friendsSent       Friendship[]        @relation("FriendRequester")
+  friendsReceived   Friendship[]        @relation("FriendAddressee")
+  tournamentEntries TournamentEntry[]
 
   @@index([rating])
 }
@@ -132,7 +166,7 @@ model MissionProgress {
   period    String
   periodKey String
 
-  progress Int       @default(0)
+  progress  Int       @default(0)
   claimedAt DateTime?
 
   createdAt DateTime @default(now())
@@ -178,13 +212,13 @@ model AuthIdentity {
 }
 
 model RefreshToken {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
   // Stored hashed so a database read cannot mint sessions. See docs/AUTHENTICATION.md
-  tokenHash String   @unique
+  tokenHash String    @unique
   expiresAt DateTime
   revokedAt DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -223,7 +257,7 @@ model MatchParticipant {
   averageQuality Float @default(0)
 
   // win | loss | draw | null while in progress
-  result      String?
+  result       String?
   ratingBefore Int?
   ratingAfter  Int?
   ratingDelta  Int?
@@ -232,8 +266,8 @@ model MatchParticipant {
   // who is outmatched on rating still has something to improve that is entirely
   // within their control. Persisted rather than recomputed so a change to the
   // grading curve cannot silently rewrite a player's history.
-  grade     String?
-  xpEarned  Int     @default(0)
+  grade    String?
+  xpEarned Int     @default(0)
 
   match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -276,4 +310,107 @@ model CheatFlag {
   match Match? @relation(fields: [matchId], references: [id], onDelete: SetNull)
 
   @@index([userId])
+}
+
+// ---------------------------------------------------------------- tournaments
+
+model Tournament {
+  id           String @id @default(cuid())
+  name         String
+  exerciseSlug String
+  // open | live | finished | cancelled
+  status       String @default("open")
+
+  maxEntrants Int @default(16)
+
+  // Set when the draw is made, so a bracket's shape is fixed at the moment it
+  // was seeded and cannot drift if entrants are later removed.
+  rounds Int @default(0)
+
+  championId String?
+
+  createdAt DateTime  @default(now())
+  startedAt DateTime?
+  endedAt   DateTime?
+
+  entrants TournamentEntry[]
+  matches  TournamentMatch[]
+
+  @@index([status])
+}
+
+model TournamentEntry {
+  id           String @id @default(cuid())
+  tournamentId String
+  userId       String
+
+  // Assigned at draw time, 1 = top seed. Null until the tournament starts.
+  seed       Int?
+  eliminated Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tournamentId, userId])
+  @@index([userId])
+}
+
+model TournamentMatch {
+  id           String @id @default(cuid())
+  tournamentId String
+
+  // Zero-based; round 0 is the opening round, `rounds - 1` is the final.
+  round    Int
+  position Int
+
+  // Null where the slot is a bye or is still waiting on a feeder result.
+  aUserId String?
+  bUserId String?
+
+  winnerId String?
+
+  // The live Match this slot was played out in. Null until it is played, and
+  // null forever for a bye — a walkover is not a match anyone competed in.
+  matchId String?
+
+  // pending | ready | live | done
+  status String @default("pending")
+
+  createdAt DateTime @default(now())
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  @@unique([tournamentId, round, position])
+  @@index([tournamentId, status])
+}
+
+// --------------------------------------------------------------- account mail
+
+// Email verification and password reset, in one table.
+//
+// One model rather than two because the shape and the lifecycle are identical —
+// a single-use secret, owned by a user, that expires — and `purpose` is the only
+// thing that differs. Two tables would mean two sets of the same expiry and
+// consumption logic to keep in step.
+//
+// The token itself is never stored. Only its SHA-256 hash is, exactly as
+// RefreshToken does it, so a database read cannot mint a password reset.
+model VerificationToken {
+  id     String @id @default(cuid())
+  userId String
+
+  // email_verification | password_reset
+  purpose   String
+  tokenHash String @unique
+
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose])
+  @@index([expiresAt])
 }

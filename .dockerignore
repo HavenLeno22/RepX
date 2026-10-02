@@ -1,0 +1,44 @@
+# Keeping the build context small is not cosmetic here: node_modules in an npm
+# workspace is hundreds of megabytes, and Docker uploads the entire context to
+# the daemon before the first instruction runs.
+node_modules
+**/node_modules
+
+# Rebuilt inside the image. Copying host output in would ship whatever was last
+# built on someone's laptop — including a SQLite-bound Prisma client.
+dist
+**/dist
+**/dist-esm
+*.tsbuildinfo
+
+# Secrets and local state. .env in particular must never enter an image layer:
+# layers are readable by anyone who can pull it, and deleting the file in a later
+# instruction does not remove it from the layer that added it.
+.env
+**/.env
+**/.env.local
+*.pem
+*.key
+*.keystore
+*.db
+*.db-journal
+
+# Not needed to build or run the API.
+.git
+.github
+.vscode
+.claude
+android
+docs
+assets
+scripts
+coverage
+*.log
+*.md
+
+# The frontend is not built here, but npm refuses to install a workspace whose
+# manifest is missing — it is listed in the root package.json "workspaces", and
+# `npm ci` validates every member against the lockfile. So the directory is
+# excluded and this one file is let back in.
+frontend
+!frontend/package.json

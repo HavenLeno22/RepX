@@ -233,9 +233,17 @@ export function Leaderboard() {
 
 /* ---------------------------------------------------------------- podium -- */
 
+/**
+ * Two orderings are in play here and they are not the same, which is worth
+ * stating plainly because conflating them silently awards second place the gold.
+ *
+ * `PODIUM_ORDER` is slot → finishing position: the middle slot holds the winner.
+ * `PODIUM_HEIGHTS` and `PODIUM_COLORS` are indexed by *finishing position*, so
+ * entry 0 is always first place — tallest plinth, gold — wherever it is standing.
+ */
 const PODIUM_ORDER = [1, 0, 2]; // silver, gold, bronze — gold in the middle
-const PODIUM_HEIGHTS = [96, 128, 80];
-const PODIUM_COLORS = ['var(--silver)', 'var(--gold)', 'var(--bronze)'];
+const PODIUM_HEIGHTS = [128, 96, 80]; // 1st, 2nd, 3rd
+const PODIUM_COLORS = ['var(--gold)', 'var(--silver)', 'var(--bronze)']; // 1st, 2nd, 3rd
 
 /**
  * The top three, staged.

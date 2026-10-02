@@ -120,6 +120,22 @@ const SEVERITY: Record<string, string> = {
   static_input: 'medium',
 };
 
+/**
+ * Whether a set of flags is serious enough to void the match.
+ *
+ * Only `high` counts. The high-severity signals all mean the *frame stream
+ * itself* was manipulated — replayed, reordered, or run against a clock that
+ * does not move like a clock — which no amount of bad network explains.
+ * `static_input` is medium because a genuinely still player at the start of a
+ * set trips it, and a false positive there is a real player told they cheated.
+ */
+export function isDisqualifying(flags: Iterable<string>): boolean {
+  for (const flag of flags) {
+    if (SEVERITY[flag] === 'high') return true;
+  }
+  return false;
+}
+
 function torsoSize(frame: PoseFrame): number {
   const shoulder = frame[LM.LEFT_SHOULDER];
   const hip = frame[LM.LEFT_HIP];

@@ -1,0 +1,25 @@
+# SPA routing for Netlify and Cloudflare Pages.
+#
+# RepX uses BrowserRouter, so /play, /privacy and /delete-account are real URLs
+# that the static host has no file for. Without this rule a hard refresh or a
+# pasted link returns 404 — including the /verify and /reset links sent by
+# email, and the /privacy and /delete-account URLs submitted to Google Play.
+#
+# ORDER MATTERS. The catch-all is last, and the exclusions above it exist
+# because a blanket rewrite silently serves index.html for them:
+#
+#   assetlinks.json  Chrome would receive HTML where it expects JSON, fail
+#                    verification, and the Play app would show a URL bar with no
+#                    obvious cause. This is the most common TWA failure there is.
+#   sw.js            A service worker served as HTML fails to register, taking
+#                    offline support with it.
+#
+# 200 rather than 301: the browser must keep the original URL so the router can
+# read it. A redirect would rewrite the address bar to / and lose the token in a
+# password-reset link.
+
+/.well-known/assetlinks.json   /.well-known/assetlinks.json   200
+/sw.js                         /sw.js                         200
+/manifest.webmanifest          /manifest.webmanifest          200
+
+/*                             /index.html                    200

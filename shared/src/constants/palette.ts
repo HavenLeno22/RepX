@@ -18,15 +18,21 @@
 
 /* ------------------------------------------------------------- surfaces -- */
 
-/** The page itself. Near-black, never pure black — pure black next to a live
- *  camera feed is harsh, and the arena is where players spend the most time. */
-export const BACKGROUND = '#09090B';
+/**
+ * The page itself. Near-black, never pure black — pure black next to a live
+ * camera feed is harsh, and the arena is where players spend the most time.
+ *
+ * The surface ramp carries a deliberate blue-steel undertone rather than being
+ * neutral grey. Neutral grey under a lime accent reads as office software; the
+ * cool cast reads as floodlit metal, and it costs nothing to have.
+ */
+export const BACKGROUND = '#07080C';
 /** Chrome and inset regions that sit behind cards. */
-export const SURFACE = '#111217';
+export const SURFACE = '#0E1016';
 /** Every card, panel and raised container. */
-export const CARD = '#1A1B22';
+export const CARD = '#15181F';
 /** Hairlines, dividers, card outlines. */
-export const BORDER = '#2A2D36';
+export const BORDER = '#2B303C';
 
 /* ---------------------------------------------------------------- brand -- */
 
