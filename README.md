@@ -14,6 +14,10 @@ matchmaking → live camera match with AI-verified reps → ELO settlement →
 leaderboard. See [`docs/IMPLEMENT.md`](docs/IMPLEMENT.md) for exactly what is and
 isn't built.
 
+| Onboarding | Home (seeded demo account) |
+| --- | --- |
+| ![Onboarding screen explaining a 60-second battle](docs/screenshots/onboarding.webp) | ![Home screen with rating, progress, missions and season](docs/screenshots/home.webp) |
+
 ## Quick start
 
 Requires **Node 20+**. No Docker, no database server, no Python.
